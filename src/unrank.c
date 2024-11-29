@@ -15,7 +15,7 @@ enum {
   BIN_CACHE = 1,
   COMB_CACHE = 2,
   ACC_COMB_CACHE = 3,
-  BIT_LENGTH = 10240,
+  BIT_LENGTH = 512,
   NS_TO_SEC = 1000000000,
 };
 
@@ -169,11 +169,6 @@ void lex_it(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
   }
 
   rop[0] = it_n;
-
-  for (uint16_t i = 0; i < k; ++i) {
-    printf("%d ", rop[i]);
-  }
-  printf("\n");
 }
 
 void lex_plus_it(uint16_t *rop, const uint16_t n, const uint16_t k,
@@ -208,11 +203,6 @@ void lex_plus_it(uint16_t *rop, const uint16_t n, const uint16_t k,
 
   rop[0] = it_n;
 
-  for (uint16_t i = 0; i < k; ++i) {
-    printf("%d ", rop[i]);
-  }
-  printf("\n");
-
   free(prev_sum);
 }
 
@@ -233,11 +223,6 @@ void gray_it(uint16_t *rop, const uint16_t n, const uint16_t k,
   }
 
   rop[0] = it_n;
-
-  for (uint16_t i = 0; i < k; ++i) {
-    printf("%d ", rop[i]);
-  }
-  printf("\n");
 }
 
 void check_valid_bounded_composition(const uint16_t *c, const uint16_t n,
@@ -361,7 +346,8 @@ int32_t main(int32_t argc, char **argv) {
     build_comb_cache(n, k, d);
   }
 
-  uint16_t len = (1 + logl(inner_bic(n, k, d)) / log(2)) / sizeof(uint64_t);
+  long double comb_lg = logl(inner_bic(n, k, d)) / log(2);
+  uint16_t len = (1 + comb_lg) / sizeof(uint64_t);
 
   long double total_time = 0;
   struct timespec time_start;
@@ -405,9 +391,9 @@ int32_t main(int32_t argc, char **argv) {
     free(message);
   }
 
-  printf("n = %6d, k = %6d, d = %6d, i = %6u, avg time = %14.2Lf ns,"
-         " avg cycles = %14.2Lf\n",
-         n, k, d, iterations, total_time / iterations,
+  printf("n = %5d, k = %5d, d = %5d, i = %5u, m = %10.4Lf, "
+         "avg time = %14.2Lf ns, avg cycles = %14.2Lf\n",
+         n, k, d, iterations, comb_lg, total_time / iterations,
          total_cycles / iterations);
 
   free(comb_cache);
