@@ -9,3 +9,5 @@ needed; GCC and Clang were successfully tested.
 This is an alternative to GMP-based implementations for use cases where the
 library is not available or cannot be used. Type `make` to compile the code and
 `./src/unrank` to see the available options.
+
+Typing `make IT=$N test` unranks $N random integers for several parameter sets.

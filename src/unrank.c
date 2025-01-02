@@ -41,6 +41,7 @@ static const struct option long_options[] = {
     {"algorithm", required_argument, 0, 'a'},
     {"iterations", required_argument, 0, 'i'},
     {"cache", required_argument, 0, 'c'},
+    {"target", required_argument, 0, 'm'},
     {0, 0, 0, 0},
 };
 
@@ -151,6 +152,33 @@ void build_comb_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   }
 }
 
+long double lg_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
+  return logl(inner_bic(n, k, d)) / log(2);
+}
+
+void get_min_params(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
+  uint16_t it_d = 0;
+  uint16_t it_n = (k * it_d) / 2;
+
+  while (lg_bic(it_n, k, it_d) < m) {
+    ++it_d;
+    it_n = (k * it_d) / 2;
+  }
+
+  while (lg_bic(it_n, k, it_d) >= m) {
+    --it_d;
+  }
+  ++it_d;
+
+  while (lg_bic(it_n, k, it_d) >= m) {
+    --it_n;
+  }
+  ++it_n;
+
+  *n = it_n;
+  *d = it_d;
+}
+
 void colex(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
            uintx rank) {
   uint16_t it_n = n;
@@ -252,9 +280,10 @@ void check_valid_bounded_composition(const uint16_t *c, const uint16_t n,
 }
 
 int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
-                   uint16_t *d, uint32_t *iterations, unrank_func *unrank) {
+                   uint16_t *d, uint32_t *iterations, unrank_func *unrank,
+                   uint16_t *m) {
   for (;;) {
-    int c = getopt_long(argc, argv, "n:k:d:a:i:c:", long_options, NULL);
+    int c = getopt_long(argc, argv, "n:k:d:a:i:c:m:", long_options, NULL);
     if (c == -1) {
       break;
     }
@@ -296,12 +325,17 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
         return 1;
       }
       break;
+    case 'm':
+      *m = strtol(optarg, NULL, 0);
+      break;
     default:
       return 1;
     }
   }
 
-  if (*n == 0 || *k == 0 || *d == 0) {
+  if (*m != 0 && *k != 0 && *n == 0 && *d == 0) {
+    get_min_params(*m, n, *k, d);
+  } else if (*n == 0 || *k == 0 || *d == 0) {
     int32_t ret = fprintf(
         stderr,
         "Unranking algorithms for integer compositions with summands\n"
@@ -334,7 +368,9 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
         "         Available options are:\n"
         "           * `bin` (binomial coefficients);\n"
         "           * `comb` (#C(n, k, d) for intermediate parameters);\n"
-        "           * `acc` (accumulated sums of #C(n, k, d)).\n",
+        "           * `acc` (accumulated sums of #C(n, k, d)).\n"
+        "  -m, --target=<uint16_t>\n"
+        "         Target security level, in bits.\n",
         argv[0]);
     (void)ret;
     return 1;
@@ -353,10 +389,11 @@ int32_t main(int32_t argc, char **argv) {
   uint16_t n = 0;
   uint16_t k = 0;
   uint16_t d = 0;
+  uint16_t m = 0;
   uint32_t iterations = 1;
   unrank_func unrank = colex;
 
-  if (parse_args(argc, argv, &n, &k, &d, &iterations, &unrank) > 0) {
+  if (parse_args(argc, argv, &n, &k, &d, &iterations, &unrank, &m) > 0) {
     return 1;
   }
 
@@ -366,7 +403,7 @@ int32_t main(int32_t argc, char **argv) {
     build_comb_cache(n, k, d);
   }
 
-  long double comb_lg = logl(inner_bic(n, k, d)) / log(2);
+  long double comb_lg = lg_bic(n, k, d);
   uint16_t len = (1 + comb_lg) / sizeof(uint64_t);
 
   long double total_time = 0;
