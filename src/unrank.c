@@ -24,10 +24,10 @@ typedef _BitInt(BIT_LENGTH) intx;
 typedef void (*unrank_func)(uint16_t *, const uint16_t, const uint16_t,
                             const uint16_t, uintx);
 
-void lex_it(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
-void lex_plus_it(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
-void gray_it(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
-void enup_it(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
+void colex(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
+void colex_part(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
+void enup(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
+void emk(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
 
 static int cache_type = NO_CACHE;
 static uint16_t param_k = 0;
@@ -133,7 +133,7 @@ void build_bin_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   bin_cache = calloc((uint32_t)((n + k + 1) * param_k), sizeof(uintx));
   assert(bin_cache != NULL);
 
-  for (uint32_t row = 0; row < (uint32_t) (n + k + 1); ++row) {
+  for (uint32_t row = 0; row < (uint32_t)(n + k + 1); ++row) {
     bin_cache[0 + k * row] = 1;
     bin_cache[1 + k * row] = row;
 
@@ -156,8 +156,8 @@ void build_comb_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   }
 }
 
-void lex_it(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
-            uintx rank) {
+void colex(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
+           uintx rank) {
   uint16_t it_n = n;
   uint16_t part = 0;
   uintx count = 0;
@@ -172,8 +172,8 @@ void lex_it(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
   rop[0] = it_n;
 }
 
-void lex_plus_it(uint16_t *rop, const uint16_t n, const uint16_t k,
-                 const uint16_t d, uintx rank) {
+void colex_part(uint16_t *rop, const uint16_t n, const uint16_t k,
+                const uint16_t d, uintx rank) {
   uint16_t it_n = n;
   uint16_t part = 0;
 
@@ -184,7 +184,7 @@ void lex_plus_it(uint16_t *rop, const uint16_t n, const uint16_t k,
     uintx left = 0;
     intx right = inner_bic_with_sums(it_n, i, d, prev_sum);
 
-    for (part = 0; part < min(it_n, d) && rank >= (uintx) right; ++part) {
+    for (part = 0; part < min(it_n, d) && rank >= (uintx)right; ++part) {
       left = right;
       uint16_t numerator = (it_n - part);
       uint16_t denominator = (it_n - part) + i - 1;
@@ -207,8 +207,28 @@ void lex_plus_it(uint16_t *rop, const uint16_t n, const uint16_t k,
   free(prev_sum);
 }
 
-void gray_it(uint16_t *rop, const uint16_t n, const uint16_t k,
-             const uint16_t d, uintx rank) {
+void enup(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
+          uintx rank) {
+  uint16_t it_n = n;
+  uint16_t part = 0;
+  uintx count = 0;
+
+  // rank = bic(it_n, k, d) - 1 - rank;
+  for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
+    for (part = 0;
+         count = bic(it_n - part, i, d), part < min(it_n, d) && rank >= count;
+         ++part, rank -= count) {
+    }
+    if (!(part & 1U)) {
+      rank = count - 1 - rank;
+    }
+  }
+
+  rop[0] = it_n;
+}
+
+void emk(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
+          uintx rank) {
   uint16_t it_n = n;
   uint16_t part = 0;
   uintx count = 0;
@@ -219,26 +239,6 @@ void gray_it(uint16_t *rop, const uint16_t n, const uint16_t k,
          ++part, rank -= count) {
     }
     if (part & 1U) {
-      rank = count - 1 - rank;
-    }
-  }
-
-  rop[0] = it_n;
-}
-
-void enup_it(uint16_t *rop, const uint16_t n, const uint16_t k,
-             const uint16_t d, uintx rank) {
-  uint16_t it_n = n;
-  uint16_t part = 0;
-  uintx count = 0;
-
-  rank = bic(it_n, k, d) - 1 - rank;
-  for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
-    for (part = 0;
-         count = bic(it_n - part, i, d), part < min(it_n, d) && rank >= count;
-         ++part, rank -= count) {
-    }
-    if (!(part & 1U)) {
       rank = count - 1 - rank;
     }
   }
@@ -275,14 +275,14 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
       *d = strtol(optarg, NULL, 0);
       break;
     case 'a':
-      if (strcmp(optarg, "lex") == 0) {
-        *unrank = lex_it;
-      } else if (strcmp(optarg, "lexplus") == 0) {
-        *unrank = lex_plus_it;
-      } else if (strcmp(optarg, "gray") == 0) {
-        *unrank = gray_it;
+      if (strcmp(optarg, "colex") == 0) {
+        *unrank = colex;
+      } else if (strcmp(optarg, "colexpart") == 0) {
+        *unrank = colex_part;
       } else if (strcmp(optarg, "enup") == 0) {
-        *unrank = enup_it;
+        *unrank = enup;
+      } else if (strcmp(optarg, "emk") == 0) {
+        *unrank = emk;
       } else if (fprintf(stderr, "Invalid parameter.\n")) {
         return 1;
       }
@@ -325,10 +325,11 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
         "  -a, --algorithm=<alg>\n"
         "         Use <alg> as the unranking algorithm of choice.\n"
         "         Available options are:\n"
-        "           * `lex` (lexicographic order);\n"
-        "           * `lexplus` (lexicographic order reusing partial sums);\n"
-        "           * `gray` (minimal change order, or Gray code);\n"
-        "           * `enup` (even numbers up, odd numbers down).\n"
+        "           * `colex` (co-lexicographic order);\n"
+        "           * `colexpart` (co-lexicographic order reusing partial "
+        "sums);\n"
+        "           * `enup` (even numbers up, odd numbers down);\n"
+        "           * `emk` (Eades--McKay sequence).\n"
         "\n"
         "  -i, --iterations=<uint64_t>\n"
         "         Number to repeatedly unrank random integers.\n"
@@ -358,7 +359,7 @@ int32_t main(int32_t argc, char **argv) {
   uint16_t k = 0;
   uint16_t d = 0;
   uint32_t iterations = 1;
-  unrank_func unrank = lex_it;
+  unrank_func unrank = colex;
 
   if (parse_args(argc, argv, &n, &k, &d, &iterations, &unrank) > 0) {
     return 1;
