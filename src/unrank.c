@@ -53,28 +53,23 @@ static uint64_t cpucycles(void) {
 
 uint32_t min(const uint32_t a, const uint32_t b) { return (a < b) ? a : b; }
 
-uintx mfac_uiui(uint64_t n) {
-  uintx x = n + (n == 0);
-  while (n > 2) {
-    x *= --n;
+// from FXT: aux0/binomial.h
+uintx bin_uiui(uintx n, uintx k) {
+  if (k > n)
+    return 0;
+  if ((k == 0) || (k == n))
+    return 1;
+  if (2 * k > n)
+    k = n - k;
+
+  uintx b = n - k + 1;
+  uintx f = b;
+  for (uintx j = 2; j <= k; ++j) {
+    ++f;
+    b *= f;
+    b /= j;
   }
-  return x;
-}
-
-uintx bin_uiui(uint64_t n, uint64_t k) {
-  uintx rr = k <= n;
-
-  if (k > (n >> 1U)) {
-    k = (k <= n) ? n - k : 0;
-  }
-
-  uintx kfac = mfac_uiui(k);
-
-  for (; k > 0; --k) {
-    rr *= n--;
-  }
-
-  return rr / kfac;
+  return b;
 }
 
 uintx bin(const uint64_t n, const uint64_t k) {
@@ -137,8 +132,8 @@ void build_bin_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
     bin_cache[0 + k * row] = 1;
     bin_cache[1 + k * row] = row;
 
-    for (uint16_t col = 2; col < k; ++col) {
-      bin_cache[col + k * row] = bin_uiui(row, col);
+    for (uint16_t col = 2; col < param_k; ++col) {
+      bin_cache[col + param_k * row] = bin_uiui(row, col);
     }
   }
 }
@@ -149,9 +144,9 @@ void build_comb_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   assert(comb_cache != NULL);
 
   comb_cache[0] = 1;
-  for (uint16_t row = 1; row <= k; ++row) {
-    for (uint16_t col = 0; col <= n; ++col) {
-      comb_cache[row + param_k * col] = inner_bic(col, row, d);
+  for (uint16_t row = 0; row < n + 1; ++row) {
+    for (uint16_t col = 1; col < param_k; ++col) {
+      comb_cache[col + param_k * row] = inner_bic(row, col, d);
     }
   }
 }
