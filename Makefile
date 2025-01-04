@@ -1,4 +1,3 @@
-CC = clang
 CFLAGS = -Wall -Wextra -pedantic -Ofast -g -std=gnu23 -march=native -mtune=native
 LDFLAGS = -lm
 SRC = src/unrank.c

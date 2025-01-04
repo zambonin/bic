@@ -15,7 +15,7 @@ enum {
   BIN_CACHE = 1,
   COMB_CACHE = 2,
   ACC_COMB_CACHE = 3,
-  BIT_LENGTH = 512,
+  BIT_LENGTH = 384,
   NS_TO_SEC = 1000000000,
 };
 
@@ -81,6 +81,30 @@ uintx bin(const uint64_t n, const uint64_t k) {
   return bin_uiui(n, k);
 }
 
+uintx inner_bic_no_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
+  if (n == 0) {
+    return 1;
+  }
+
+  intx rop = 0;
+  intx inner = 0;
+  uintx left = 0;
+  uintx right = 0;
+
+  uint16_t j = min(k, n / (d + 1));
+  for (uint16_t i = 0; i <= j; ++i) {
+    left = bin_uiui(k, i);
+    right = bin_uiui(n - (d + 1) * i + k - 1, k - 1);
+    inner = left * right;
+    if (i & 1U) {
+      inner = -inner;
+    }
+    rop += inner;
+  }
+
+  return (uintx)rop;
+}
+
 uintx inner_bic_with_sums(const uint16_t n, const uint16_t k, const uint16_t d,
                           intx *partial_sums) {
   if (n == 0) {
@@ -126,15 +150,22 @@ uintx bic(const uint16_t n, const uint16_t k, const uint16_t d) {
 void build_bin_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   param_k = k;
   (void)d;
-  bin_cache = calloc((uint32_t)((n + k + 1) * param_k), sizeof(uintx));
+  bin_cache = calloc((uint32_t)((n + param_k + 1) * param_k), sizeof(uintx));
   assert(bin_cache != NULL);
 
-  for (uint32_t row = 0; row < (uint32_t)(n + k + 1); ++row) {
+  bin_cache[0] = 1;
+  for (uint16_t col = 1; col < param_k; ++col) {
+    bin_cache[col] = 0;
+  }
+
+  for (uint32_t row = 1; row < (uint32_t)(n + param_k + 1); ++row) {
     bin_cache[0 + k * row] = 1;
     bin_cache[1 + k * row] = row;
 
     for (uint16_t col = 2; col < param_k; ++col) {
-      bin_cache[col + param_k * row] = bin_uiui(row, col);
+      bin_cache[col + param_k * row] =
+          bin_cache[(col - 1) + param_k * (row - 1)] +
+          bin_cache[col + param_k * (row - 1)];
     }
   }
 }
@@ -153,10 +184,11 @@ void build_comb_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
 }
 
 long double lg_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
-  return logl(inner_bic(n, k, d)) / log(2);
+  return logl(inner_bic_no_cache(n, k, d)) / log(2);
 }
 
-void get_min_params(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
+void get_min_params(const uint16_t m, uint16_t *n, const uint16_t k,
+                    uint16_t *d) {
   uint16_t it_d = 0;
   uint16_t it_n = (k * it_d) / 2;
 
@@ -251,7 +283,7 @@ void enup(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
 }
 
 void emk(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
-          uintx rank) {
+         uintx rank) {
   uint16_t it_n = n;
   uint16_t part = 0;
   uintx count = 0;
@@ -369,6 +401,7 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
         "           * `bin` (binomial coefficients);\n"
         "           * `comb` (#C(n, k, d) for intermediate parameters);\n"
         "           * `acc` (accumulated sums of #C(n, k, d)).\n"
+        "\n"
         "  -m, --target=<uint16_t>\n"
         "         Target security level, in bits.\n",
         argv[0]);
