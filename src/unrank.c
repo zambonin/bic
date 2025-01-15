@@ -347,7 +347,9 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
       *iterations = strtol(optarg, NULL, 0);
       break;
     case 'c':
-      if (strcmp(optarg, "bin") == 0) {
+      if (strcmp(optarg, "none") == 0) {
+        cache_type = NO_CACHE;
+      } else if (strcmp(optarg, "bin") == 0) {
         cache_type = BIN_CACHE;
       } else if (strcmp(optarg, "comb") == 0) {
         cache_type = COMB_CACHE;

@@ -11,3 +11,14 @@ library is not available or cannot be used. Type `make` to compile the code and
 `./src/unrank` to see the available options.
 
 Typing `make IT=$N test` unranks $N random integers for several parameter sets.
+Other variables that control the behavior of the program can also be passed to
+the Makefile to experiment with specific parameters. For instance, the command
+
+  `make ALG=colexpart IT=1024 CACHE=bin test-256`
+
+will run tests for the unranking algorithm to the co-lexicographic order which
+reuses partial sums, with a pre-computed cache of binomial coefficients, for
+1024 repetitions at the 256-bit security level.
+
+The helper script `plot-results.sh` uses Gnuplot to show the relative
+performance of each algorithm, cache type and security level.
