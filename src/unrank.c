@@ -15,7 +15,7 @@ enum {
   BIN_CACHE = 1,
   COMB_CACHE = 2,
   ACC_COMB_CACHE = 3,
-  BIT_LENGTH = 384,
+  BIT_LENGTH = 256 + 64 + 32,
   NS_TO_SEC = 1000000000,
 };
 
@@ -30,9 +30,10 @@ void enup(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
 void emk(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
 
 static int cache_type = NO_CACHE;
-static uint16_t param_k = 0;
-static uintx *comb_cache;
 static uintx *bin_cache;
+static uint16_t bin_cache_cols = 0;
+static uintx *comb_cache;
+static uint16_t comb_cache_cols = 0;
 
 static const struct option long_options[] = {
     {"sum", required_argument, 0, 'n'},
@@ -50,6 +51,14 @@ static uint64_t cpucycles(void) {
   __asm volatile(".byte 15;.byte 49;shlq $32,%%rdx;orq %%rdx,%%rax"
                  : "=a"(result)::"%rdx");
   return result;
+}
+
+static uintx *get_bin(const size_t i, const size_t j) {
+  return bin_cache + (i * bin_cache_cols) + j;
+}
+
+static uintx *get_bic(const size_t i, const size_t j) {
+  return comb_cache + (i * comb_cache_cols) + j;
 }
 
 uint32_t min(const uint32_t a, const uint32_t b) { return (a < b) ? a : b; }
@@ -74,8 +83,8 @@ uintx bin_uiui(uintx n, uintx k) {
 }
 
 uintx bin(const uint64_t n, const uint64_t k) {
-  if (cache_type == BIN_CACHE) {
-    return bin_cache[n * param_k + k];
+  if (cache_type > NO_CACHE) {
+    return *get_bin(n, k);
   }
 
   return bin_uiui(n, k);
@@ -139,46 +148,44 @@ uintx inner_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
 }
 
 uintx bic(const uint16_t n, const uint16_t k, const uint16_t d) {
-  if (cache_type == COMB_CACHE) {
+  if (cache_type > BIN_CACHE) {
     (void)d;
-    return comb_cache[k + param_k * n];
+    return *get_bic(n, k);
   }
 
   return inner_bic(n, k, d);
 }
 
 void build_bin_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
-  param_k = k;
   (void)d;
-  bin_cache = calloc((uint32_t)((n + param_k + 1) * param_k), sizeof(uintx));
+  uint32_t n_rows = n + k + 1;
+  uint32_t n_cols = k;
+  bin_cache_cols = n_cols;
+
+  bin_cache = calloc(n_rows * n_cols, sizeof(uintx));
   assert(bin_cache != NULL);
 
-  bin_cache[0] = 1;
-  for (uint16_t col = 1; col < param_k; ++col) {
-    bin_cache[col] = 0;
-  }
-
-  for (uint32_t row = 1; row < (uint32_t)(n + param_k + 1); ++row) {
-    bin_cache[0 + k * row] = 1;
-    bin_cache[1 + k * row] = row;
-
-    for (uint16_t col = 2; col < param_k; ++col) {
-      bin_cache[col + param_k * row] =
-          bin_cache[(col - 1) + param_k * (row - 1)] +
-          bin_cache[col + param_k * (row - 1)];
+  *get_bin(0, 0) = 1;
+  for (uint32_t row = 1; row < n_rows; ++row) {
+    *get_bin(row, 0) = 1;
+    for (uint16_t col = 1; col <= min(row, n_cols); ++col) {
+      *get_bin(row, col) = *get_bin(row - 1, col - 1) + *get_bin(row - 1, col);
     }
   }
 }
 
 void build_comb_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
-  param_k = k + 1;
-  comb_cache = calloc((uint32_t)((n + 1) * param_k), sizeof(uintx));
+  uint32_t n_rows = n + 1;
+  uint32_t n_cols = k + 1;
+  comb_cache_cols = n_cols;
+
+  comb_cache = calloc(n_rows * n_cols, sizeof(uintx));
   assert(comb_cache != NULL);
 
-  comb_cache[0] = 1;
-  for (uint16_t row = 0; row < n + 1; ++row) {
-    for (uint16_t col = 1; col < param_k; ++col) {
-      comb_cache[col + param_k * row] = inner_bic(row, col, d);
+  *get_bic(0, 0) = 1;
+  for (uint16_t row = 0; row < n_rows; ++row) {
+    for (uint16_t col = 1; col < n_cols; ++col) {
+      *get_bic(row, col) = inner_bic(row, col, d);
     }
   }
 }
@@ -218,8 +225,7 @@ void colex(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
   uintx count = 0;
 
   for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
-    for (part = 0;
-         count = bic(it_n - part, i, d), part < min(it_n, d) && rank >= count;
+    for (part = 0; count = bic(it_n - part, i, d), rank >= count;
          ++part, rank -= count) {
     }
   }
@@ -239,7 +245,7 @@ void colex_part(uint16_t *rop, const uint16_t n, const uint16_t k,
     uintx left = 0;
     intx right = inner_bic_with_sums(it_n, i, d, prev_sum);
 
-    for (part = 0; part < min(it_n, d) && rank >= (uintx)right; ++part) {
+    for (part = 0; rank >= (uintx)right; ++part) {
       left = right;
       uint16_t numerator = (it_n - part);
       uint16_t denominator = (it_n - part) + i - 1;
@@ -270,8 +276,7 @@ void enup(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
 
   // rank = bic(it_n, k, d) - 1 - rank;
   for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
-    for (part = 0;
-         count = bic(it_n - part, i, d), part < min(it_n, d) && rank >= count;
+    for (part = 0; count = bic(it_n - part, i, d), rank >= count;
          ++part, rank -= count) {
     }
     if (!(part & 1U)) {
@@ -289,8 +294,7 @@ void emk(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
   uintx count = 0;
 
   for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
-    for (part = 0;
-         count = bic(it_n - part, i, d), part < min(it_n, d) && rank >= count;
+    for (part = 0; count = bic(it_n - part, i, d), rank >= count;
          ++part, rank -= count) {
     }
     if (part & 1U) {
@@ -432,10 +436,11 @@ int32_t main(int32_t argc, char **argv) {
     return 1;
   }
 
-  if (cache_type == BIN_CACHE) {
+  if (cache_type > NO_CACHE) {
     build_bin_cache(n, k, d);
-  } else if (cache_type == COMB_CACHE) {
-    build_comb_cache(n, k, d);
+    if (cache_type > BIN_CACHE) {
+      build_comb_cache(n, k, d);
+    }
   }
 
   long double comb_lg = lg_bic(n, k, d);
