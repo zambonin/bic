@@ -1,4 +1,5 @@
-CFLAGS = -Wall -Wextra -pedantic -Ofast -g -std=gnu23 -march=native -mtune=native
+CC = clang
+CFLAGS = -Wall -Wextra -pedantic -O3 -ffast-math -std=gnu23 -march=native -mtune=native
 LDFLAGS = -lm
 SRC = src/unrank.c
 OUT = $(basename $(SRC))

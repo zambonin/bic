@@ -1,5 +1,3 @@
-// NOLINTBEGIN(readability-identifier-length, llvmlibc-restrict-system-libc-headers, concurrency-mt-unsafe, hicpp-no-assembler, misc-include-cleaner, clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling, cppcoreguidelines-avoid-non-const-global-variables, bugprone-easily-swappable-parameters)
-
 #include <assert.h>
 #include <getopt.h>
 #include <math.h>
@@ -15,12 +13,13 @@ enum {
   BIN_CACHE = 1,
   COMB_CACHE = 2,
   ACC_COMB_CACHE = 3,
-  BIT_LENGTH = 256 + 64 + 32,
+  BIT_LENGTH = 2 * (256 + 64 + 32),
   NS_TO_SEC = 1000000000,
 };
 
 typedef unsigned _BitInt(BIT_LENGTH) uintx;
 typedef _BitInt(BIT_LENGTH) intx;
+
 typedef void (*unrank_func)(uint16_t *, const uint16_t, const uint16_t,
                             const uint16_t, uintx);
 
@@ -162,13 +161,13 @@ void build_bin_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   uint32_t n_cols = k;
   bin_cache_cols = n_cols;
 
-  bin_cache = calloc(n_rows * n_cols, sizeof(uintx));
+  bin_cache = (uintx *)calloc(n_rows * n_cols, sizeof(uintx));
   assert(bin_cache != NULL);
 
   *get_bin(0, 0) = 1;
   for (uint32_t row = 1; row < n_rows; ++row) {
     *get_bin(row, 0) = 1;
-    for (uint16_t col = 1; col <= min(row, n_cols); ++col) {
+    for (uint16_t col = 1; col <= min(row, n_cols - 1); ++col) {
       *get_bin(row, col) = *get_bin(row - 1, col - 1) + *get_bin(row - 1, col);
     }
   }
@@ -179,7 +178,7 @@ void build_comb_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   uint32_t n_cols = k + 1;
   comb_cache_cols = n_cols;
 
-  comb_cache = calloc(n_rows * n_cols, sizeof(uintx));
+  comb_cache = (uintx *)calloc(n_rows * n_cols, sizeof(uintx));
   assert(comb_cache != NULL);
 
   *get_bic(0, 0) = 1;
@@ -239,10 +238,10 @@ void colex_part(uint16_t *rop, const uint16_t n, const uint16_t k,
   uint16_t part = 0;
 
   uint16_t j = min(k - 1, it_n / (d + 1));
-  intx *prev_sum = calloc(j + 1, sizeof(intx));
+  intx *prev_sum = (intx *)calloc(j + 1, sizeof(intx));
 
   for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
-    uintx left = 0;
+    intx left = 0;
     intx right = inner_bic_with_sums(it_n, i, d, prev_sum);
 
     for (part = 0; rank >= (uintx)right; ++part) {
@@ -260,7 +259,7 @@ void colex_part(uint16_t *rop, const uint16_t n, const uint16_t k,
       }
     }
 
-    rank -= left;
+    rank -= (uintx)left;
   }
 
   rop[0] = it_n;
@@ -467,7 +466,7 @@ int32_t main(int32_t argc, char **argv) {
     for (uint16_t i = 0; i < len; ++i) {
       ptr[len - 1 - i] = message[i];
     }
-    uint16_t *comp = calloc(k, sizeof(uint16_t));
+    uint16_t *comp = (uint16_t *)calloc(k, sizeof(uint16_t));
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &time_start);
     cycle_start = cpucycles();
@@ -498,5 +497,3 @@ int32_t main(int32_t argc, char **argv) {
 
   return 0;
 }
-
-// NOLINTEND(readability-identifier-length, llvmlibc-restrict-system-libc-headers, concurrency-mt-unsafe, hicpp-no-assembler, misc-include-cleaner, clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling, cppcoreguidelines-avoid-non-const-global-variables, bugprone-easily-swappable-parameters)
