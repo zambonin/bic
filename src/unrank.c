@@ -34,6 +34,16 @@ static uint16_t bin_cache_cols = 0;
 static uintx *comb_cache;
 static uint16_t comb_cache_cols = 0;
 
+#define BUILD_CACHE(rows, cols, var, logic)                                    \
+  uint32_t n_rows = rows;                                                      \
+  uint32_t n_cols = cols;                                                      \
+  var##_cols = n_cols;                                                         \
+                                                                               \
+  var = (uintx *)calloc(n_rows * n_cols, sizeof(uintx));                       \
+  assert(var != NULL);                                                         \
+                                                                               \
+  logic;
+
 static const struct option long_options[] = {
     {"sum", required_argument, 0, 'n'},
     {"parts", required_argument, 0, 'k'},
@@ -157,36 +167,27 @@ uintx bic(const uint16_t n, const uint16_t k, const uint16_t d) {
 
 void build_bin_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   (void)d;
-  uint32_t n_rows = n + k + 1;
-  uint32_t n_cols = k;
-  bin_cache_cols = n_cols;
-
-  bin_cache = (uintx *)calloc(n_rows * n_cols, sizeof(uintx));
-  assert(bin_cache != NULL);
-
-  *get_bin(0, 0) = 1;
-  for (uint32_t row = 1; row < n_rows; ++row) {
-    *get_bin(row, 0) = 1;
-    for (uint16_t col = 1; col <= min(row, n_cols - 1); ++col) {
-      *get_bin(row, col) = *get_bin(row - 1, col - 1) + *get_bin(row - 1, col);
+  BUILD_CACHE(n + k + 1, k, bin_cache, {
+    *get_bin(0, 0) = 1;
+    for (uint32_t row = 1; row < n_rows; ++row) {
+      *get_bin(row, 0) = 1;
+      for (uint16_t col = 1; col <= min(row, n_cols - 1); ++col) {
+        *get_bin(row, col) =
+            (uintx)*get_bin(row - 1, col - 1) + (uintx)*get_bin(row - 1, col);
+      }
     }
-  }
+  });
 }
 
 void build_comb_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
-  uint32_t n_rows = n + 1;
-  uint32_t n_cols = k + 1;
-  comb_cache_cols = n_cols;
-
-  comb_cache = (uintx *)calloc(n_rows * n_cols, sizeof(uintx));
-  assert(comb_cache != NULL);
-
-  *get_bic(0, 0) = 1;
-  for (uint16_t row = 0; row < n_rows; ++row) {
-    for (uint16_t col = 1; col < n_cols; ++col) {
-      *get_bic(row, col) = inner_bic(row, col, d);
+  BUILD_CACHE(n + 1, k + 1, comb_cache, {
+    *get_bic(0, 0) = 1;
+    for (uint16_t row = 0; row < n_rows; ++row) {
+      for (uint16_t col = 1; col < n_cols; ++col) {
+        *get_bic(row, col) = inner_bic(row, col, d);
+      }
     }
-  }
+  });
 }
 
 long double lg_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
@@ -435,9 +436,9 @@ int32_t main(int32_t argc, char **argv) {
     return 1;
   }
 
-  if (cache_type > NO_CACHE) {
+  if (cache_type >= BIN_CACHE) {
     build_bin_cache(n, k, d);
-    if (cache_type > BIN_CACHE) {
+    if (cache_type >= COMB_CACHE) {
       build_comb_cache(n, k, d);
     }
   }
@@ -492,8 +493,12 @@ int32_t main(int32_t argc, char **argv) {
          n, k, d, iterations, comb_lg, total_time / iterations,
          total_cycles / iterations);
 
-  free(comb_cache);
-  free(bin_cache);
+  if (cache_type >= BIN_CACHE) {
+    free(bin_cache);
+    if (cache_type >= COMB_CACHE) {
+      free(comb_cache);
+    }
+  }
 
   return 0;
 }
