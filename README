@@ -20,5 +20,8 @@ will run tests for the unranking algorithm to the co-lexicographic order which
 reuses partial sums, with a pre-computed cache of binomial coefficients, for
 1024 repetitions at the 256-bit security level.
 
+There are equivalent `make leak` commands, which use Valgrind to check that the
+code is free of memory leaks.
+
 The helper script `plot-results.sh` uses Gnuplot to show the relative
 performance of each algorithm, cache type and security level.
