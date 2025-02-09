@@ -35,6 +35,23 @@ static uint16_t bin_cache_cols = 0;
 static uintx *comb_cache;
 static uint16_t comb_cache_cols = 0;
 
+#define MEASURE(total_time, total_cycles, logic)                               \
+  struct timespec time_start;                                                  \
+  struct timespec time_stop;                                                   \
+                                                                               \
+  clock_gettime(CLOCK_MONOTONIC_RAW, &time_start);                             \
+  uint64_t cycle_start = cpucycles();                                          \
+                                                                               \
+  logic;                                                                       \
+                                                                               \
+  uint64_t cycle_stop = cpucycles();                                           \
+  clock_gettime(CLOCK_MONOTONIC_RAW, &time_stop);                              \
+                                                                               \
+  total_time +=                                                                \
+      (long double)(time_stop.tv_sec - time_start.tv_sec) * NS_TO_SEC +        \
+      (long double)(time_stop.tv_nsec - time_start.tv_nsec);                   \
+  total_cycles += cycle_stop - cycle_start;
+
 #define BUILD_CACHE(rows, cols, var, logic)                                    \
   uint32_t n_rows = rows;                                                      \
   uint32_t n_cols = cols;                                                      \
@@ -42,8 +59,10 @@ static uint16_t comb_cache_cols = 0;
                                                                                \
   var = (uintx *)calloc(n_rows * n_cols, sizeof(uintx));                       \
   assert(var != NULL);                                                         \
+  long double total_time = 0;                                                  \
+  long double total_cycles = 0;                                                \
                                                                                \
-  logic;
+  MEASURE(total_time, total_cycles, logic);
 
 #define GET_CACHE(var, i, j) *(var + ((i) * var##_cols) + (j))
 
@@ -146,6 +165,8 @@ void build_bin_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
       }
     }
   });
+  (void)total_time;
+  (void)total_cycles;
 }
 
 void build_comb_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
@@ -157,6 +178,8 @@ void build_comb_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
       }
     }
   });
+  (void)total_time;
+  (void)total_cycles;
 }
 
 long double lg_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
@@ -393,6 +416,26 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
   return 0;
 }
 
+uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d) {
+  long double comb_lg = lg_bic(n, k, d);
+  uint16_t len = (1 + comb_lg) / sizeof(uint64_t);
+
+  uint8_t *message = (uint8_t *)calloc(len, sizeof(uint8_t));
+  for (uint16_t i = 0; i < len; ++i) {
+    message[i] = random();
+  }
+
+  uintx rank = 0;
+  unsigned char *ptr = (unsigned char *)&rank;
+
+  for (uint16_t i = 0; i < len; ++i) {
+    ptr[len - 1 - i] = message[i];
+  }
+  free(message);
+
+  return rank;
+}
+
 int32_t main(int32_t argc, char **argv) {
   uint16_t n = 0;
   uint16_t k = 0;
@@ -405,6 +448,8 @@ int32_t main(int32_t argc, char **argv) {
     return 1;
   }
 
+  srandom(time(NULL));
+
   if (cache_type >= BIN_CACHE) {
     build_bin_cache(n, k, d);
     if (cache_type >= COMB_CACHE) {
@@ -412,54 +457,23 @@ int32_t main(int32_t argc, char **argv) {
     }
   }
 
-  long double comb_lg = lg_bic(n, k, d);
-  uint16_t len = (1 + comb_lg) / sizeof(uint64_t);
-
   long double total_time = 0;
-  struct timespec time_start;
-  struct timespec time_stop;
-
   long double total_cycles = 0;
-  uint64_t cycle_start = 0;
-  uint64_t cycle_stop = 0;
+  uint16_t *comp = (uint16_t *)malloc(k * sizeof(uint16_t));
 
-  srandom(time(NULL));
   for (uint32_t it = 0; it < iterations; ++it) {
-    uint8_t *message = calloc(len, sizeof(uint8_t));
-    for (uint16_t i = 0; i < len; ++i) {
-      message[i] = random();
-    }
+    memset(comp, 0, k * sizeof(uint16_t));
 
-    uintx rank = 0;
-    unsigned char *ptr = (unsigned char *)&rank;
+    uintx rank = random_rank(n, k, d);
 
-    for (uint16_t i = 0; i < len; ++i) {
-      ptr[len - 1 - i] = message[i];
-    }
-    uint16_t *comp = (uint16_t *)calloc(k, sizeof(uint16_t));
-
-    clock_gettime(CLOCK_MONOTONIC_RAW, &time_start);
-    cycle_start = cpucycles();
-
-    (*unrank)(comp, n, k, d, rank);
-
-    cycle_stop = cpucycles();
-    clock_gettime(CLOCK_MONOTONIC_RAW, &time_stop);
-
-    total_time +=
-        (long double)(time_stop.tv_sec - time_start.tv_sec) * NS_TO_SEC +
-        (long double)(time_stop.tv_nsec - time_start.tv_nsec);
-    total_cycles += cycle_stop - cycle_start;
+    MEASURE(total_time, total_cycles, (*unrank)(comp, n, k, d, rank));
 
     check_valid_bounded_composition(comp, n, k, d);
-
-    free(comp);
-    free(message);
   }
 
   printf("n = %5d, k = %5d, d = %5d, i = %5u, m = %10.4Lf, "
          "avg time = %14.2Lf ns, avg cycles = %14.2Lf\n",
-         n, k, d, iterations, comb_lg, total_time / iterations,
+         n, k, d, iterations, lg_bic(n, k, d), total_time / iterations,
          total_cycles / iterations);
 
   if (cache_type >= BIN_CACHE) {
@@ -468,6 +482,8 @@ int32_t main(int32_t argc, char **argv) {
       free(comb_cache);
     }
   }
+
+  free(comp);
 
   return 0;
 }
