@@ -22,6 +22,7 @@ typedef _BitInt(BIT_LENGTH) intx;
 
 typedef void (*unrank_func)(uint16_t *, const uint16_t, const uint16_t,
                             const uint16_t, uintx);
+typedef uintx (*math_func)(const uint16_t, const uint16_t, const uint16_t);
 
 void colex(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
 void colex_part(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
@@ -44,6 +45,11 @@ static uint16_t comb_cache_cols = 0;
                                                                                \
   logic;
 
+#define GET_CACHE(var, i, j) *(var + ((i) * var##_cols) + (j))
+
+#define GET_CACHE_OR_CALC(mode, var, math)                                     \
+  (cache_type >= mode) ? GET_CACHE(var, n, k) : math(n, k, d);
+
 static const struct option long_options[] = {
     {"sum", required_argument, 0, 'n'},
     {"parts", required_argument, 0, 'k'},
@@ -62,28 +68,23 @@ static uint64_t cpucycles(void) {
   return result;
 }
 
-static uintx *get_bin(const size_t i, const size_t j) {
-  return bin_cache + (i * bin_cache_cols) + j;
-}
-
-static uintx *get_bic(const size_t i, const size_t j) {
-  return comb_cache + (i * comb_cache_cols) + j;
-}
-
 uint32_t min(const uint32_t a, const uint32_t b) { return (a < b) ? a : b; }
 
 // from FXT: aux0/binomial.h
-uintx bin_uiui(uintx n, uintx k) {
+uintx bin_uiui(const uint16_t n, const uint16_t k, const uint16_t d) {
+  (void)d;
   if (k > n)
     return 0;
   if ((k == 0) || (k == n))
     return 1;
-  if (2 * k > n)
-    k = n - k;
 
-  uintx b = n - k + 1;
+  uint16_t kk = k;
+  if (2 * k > n)
+    kk = n - k;
+
+  uintx b = n - kk + 1;
   uintx f = b;
-  for (uintx j = 2; j <= k; ++j) {
+  for (uintx j = 2; j <= kk; ++j) {
     ++f;
     b *= f;
     b /= j;
@@ -91,40 +92,12 @@ uintx bin_uiui(uintx n, uintx k) {
   return b;
 }
 
-uintx bin(const uint64_t n, const uint64_t k) {
-  if (cache_type > NO_CACHE) {
-    return *get_bin(n, k);
-  }
-
-  return bin_uiui(n, k);
-}
-
-uintx inner_bic_no_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
-  if (n == 0) {
-    return 1;
-  }
-
-  intx rop = 0;
-  intx inner = 0;
-  uintx left = 0;
-  uintx right = 0;
-
-  uint16_t j = min(k, n / (d + 1));
-  for (uint16_t i = 0; i <= j; ++i) {
-    left = bin_uiui(k, i);
-    right = bin_uiui(n - (d + 1) * i + k - 1, k - 1);
-    inner = left * right;
-    if (i & 1U) {
-      inner = -inner;
-    }
-    rop += inner;
-  }
-
-  return (uintx)rop;
+uintx bin(const uint16_t n, const uint16_t k, const uint16_t d) {
+  return GET_CACHE_OR_CALC(BIN_CACHE, bin_cache, bin_uiui);
 }
 
 uintx inner_bic_with_sums(const uint16_t n, const uint16_t k, const uint16_t d,
-                          intx *partial_sums) {
+                          intx *partial_sums, math_func bin_impl) {
   if (n == 0) {
     return 1;
   }
@@ -136,8 +109,8 @@ uintx inner_bic_with_sums(const uint16_t n, const uint16_t k, const uint16_t d,
 
   uint16_t j = min(k, n / (d + 1));
   for (uint16_t i = 0; i <= j; ++i) {
-    left = bin(k, i);
-    right = bin(n - (d + 1) * i + k - 1, k - 1);
+    left = bin_impl(k, i, d);
+    right = bin_impl(n - (d + 1) * i + k - 1, k - 1, d);
     inner = left * right;
     if (i & 1U) {
       inner = -inner;
@@ -153,27 +126,23 @@ uintx inner_bic_with_sums(const uint16_t n, const uint16_t k, const uint16_t d,
 }
 
 uintx inner_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
-  return inner_bic_with_sums(n, k, d, NULL);
+  return inner_bic_with_sums(n, k, d, NULL, bin);
 }
 
 uintx bic(const uint16_t n, const uint16_t k, const uint16_t d) {
-  if (cache_type > BIN_CACHE) {
-    (void)d;
-    return *get_bic(n, k);
-  }
-
-  return inner_bic(n, k, d);
+  return GET_CACHE_OR_CALC(COMB_CACHE, comb_cache, inner_bic);
 }
 
 void build_bin_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   (void)d;
   BUILD_CACHE(n + k + 1, k, bin_cache, {
-    *get_bin(0, 0) = 1;
+    GET_CACHE(bin_cache, 0, 0) = 1;
     for (uint32_t row = 1; row < n_rows; ++row) {
-      *get_bin(row, 0) = 1;
+      GET_CACHE(bin_cache, row, 0) = 1;
       for (uint16_t col = 1; col <= min(row, n_cols - 1); ++col) {
-        *get_bin(row, col) =
-            (uintx)*get_bin(row - 1, col - 1) + (uintx)*get_bin(row - 1, col);
+        GET_CACHE(bin_cache, row, col) =
+            (uintx)GET_CACHE(bin_cache, row - 1, col - 1) +
+            (uintx)GET_CACHE(bin_cache, row - 1, col);
       }
     }
   });
@@ -181,17 +150,17 @@ void build_bin_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
 
 void build_comb_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   BUILD_CACHE(n + 1, k + 1, comb_cache, {
-    *get_bic(0, 0) = 1;
+    GET_CACHE(comb_cache, 0, 0) = 1;
     for (uint16_t row = 0; row < n_rows; ++row) {
       for (uint16_t col = 1; col < n_cols; ++col) {
-        *get_bic(row, col) = inner_bic(row, col, d);
+        GET_CACHE(comb_cache, row, col) = inner_bic(row, col, d);
       }
     }
   });
 }
 
 long double lg_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
-  return logl(inner_bic_no_cache(n, k, d)) / log(2);
+  return logl(inner_bic_with_sums(n, k, d, NULL, bin_uiui)) / log(2);
 }
 
 void get_min_params(const uint16_t m, uint16_t *n, const uint16_t k,
@@ -243,7 +212,7 @@ void colex_part(uint16_t *rop, const uint16_t n, const uint16_t k,
 
   for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
     intx left = 0;
-    intx right = inner_bic_with_sums(it_n, i, d, prev_sum);
+    intx right = inner_bic_with_sums(it_n, i, d, prev_sum, bin);
 
     for (part = 0; rank >= (uintx)right; ++part) {
       left = right;
