@@ -3,9 +3,11 @@ CFLAGS = -Wall -Wextra -pedantic -O3 -ffast-math -std=gnu23 -march=native -mtune
 LDFLAGS = -lm
 SRC = src/unrank.c
 OUT = $(basename $(SRC))
+
 IT = 128
 ALG = colex
 CACHE = none
+PRINT = none
 
 default:
 
@@ -28,7 +30,7 @@ tom: LDFLAGS += -ltommath
 tom: $(OUT)
 
 %.test: $(OUT)
-	./$< -m $(subst -, -k ,$*) -a $(ALG) -i $(IT) -c $(CACHE)
+	./$< -m $(subst -, -k ,$*) -a $(ALG) -i $(IT) -c $(CACHE) -p $(PRINT)
 
 test-256: $(foreach K,$(shell seq 30 80),256-$(K).test)
 test-512: $(foreach K,$(shell seq 60 140),512-$(K).test)
@@ -37,12 +39,24 @@ test: test-256 test-512
 %.leak: $(OUT) /usr/bin/valgrind
 	valgrind --quiet --exit-on-first-error=yes --leak-check=full \
 		--errors-for-leak-kinds=all --show-leak-kinds=all --error-exitcode=1 \
-		./$< -m $(subst -, -k ,$*) -a $(ALG) -i $(IT) -c $(CACHE) \
+		./$< -m $(subst -, -k ,$*) -a $(ALG) -i $(IT) -c $(CACHE) -p $(PRINT) \
 		2>/dev/null
 
 leak-256: $(foreach K,$(shell seq 30 80),256-$(K).leak)
 leak-512: $(foreach K,$(shell seq 60 140),512-$(K).leak)
 leak: leak-256 leak-512
+
+%.stats.png: $(OUT) /usr/bin/gnuplot
+	./$< -m $(subst -, -k ,$*) -a $(ALG) -i $(IT) -c $(CACHE) -p $(PRINT) \
+		| gnuplot -e "set terminal png size 2560, 1440; \
+			plot '/dev/stdin' matrix with image notitle" > $@
+
+stats-256: $(foreach K,$(shell seq 30 80),256-$(K).stats.png)
+stats-512: $(foreach K,$(shell seq 60 140),512-$(K).stats.png)
+stats: stats-256 stats-512
+
+clean-stats:
+	$(RM) $(wildcard *.stats.png)
 
 clean:
 	$(RM) $(OUT)

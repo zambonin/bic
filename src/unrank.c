@@ -13,6 +13,10 @@ enum {
   BIN_CACHE = 1,
   COMB_CACHE = 2,
   ACC_COMB_CACHE = 3,
+  PRINT_STATS = 4,
+  PRINT_ACCESS = 5,
+  PRINT_LENGTH = 6,
+  PRINT_BUILD = 7,
   BIT_LENGTH = 512 + 64,
   NS_TO_SEC = 1000000000,
 };
@@ -65,6 +69,37 @@ static uint16_t bin_cache_cols = 0;
 static uintx *comb_cache;
 static uint16_t comb_cache_cols = 0;
 
+static int print_type = PRINT_STATS;
+static uint32_t *access_pattern;
+static uint32_t access_pattern_rows = 0;
+static uint32_t access_pattern_cols = 0;
+
+#define GET_CACHE(var, i, j) *(var + ((i) * var##_cols) + (j))
+
+#define GET_CACHE_OR_CALC(type, var, math)                                     \
+  if (cache_type >= type) {                                                    \
+    if (cache_type == type && print_type == PRINT_ACCESS) {                    \
+      (GET_CACHE(access_pattern, n, k))++;                                     \
+    }                                                                          \
+    return GET_CACHE(var, n, k);                                               \
+  }                                                                            \
+  return math(n, k, d);
+
+#define PRINT_MATRIX_GENERIC(expr, n_rows, n_cols)                             \
+  for (uint32_t row = 0; row < n_rows; ++row) {                                \
+    for (uint32_t col = 0; col < n_cols; ++col) {                              \
+      expr;                                                                    \
+    }                                                                          \
+    printf("\n");                                                              \
+  }
+
+#define PRINT_MATRIX_LG(var, n_rows, n_cols)                                   \
+  PRINT_MATRIX_GENERIC(printf("%8.2Lf ", logl2(GET_CACHE(var, row, col))),     \
+                       n_rows, n_cols)
+
+#define PRINT_MATRIX_INT(var, n_rows, n_cols)                                  \
+  PRINT_MATRIX_GENERIC(printf("%8d ", GET_CACHE(var, row, col)), n_rows, n_cols)
+
 #define MEASURE(total_time, total_cycles, logic)                               \
   struct timespec time_start;                                                  \
   struct timespec time_stop;                                                   \
@@ -82,22 +117,33 @@ static uint16_t comb_cache_cols = 0;
       (long double)(time_stop.tv_nsec - time_start.tv_nsec);                   \
   total_cycles += cycle_stop - cycle_start;
 
-#define BUILD_CACHE(rows, cols, var, logic)                                    \
+#define BUILD_CACHE(rows, cols, var, type, desc, logic)                        \
   uint32_t n_rows = rows;                                                      \
   uint32_t n_cols = cols;                                                      \
   var##_cols = n_cols;                                                         \
                                                                                \
   var = (uintx *)calloc(n_rows * n_cols, sizeof(uintx));                       \
   assert(var != NULL);                                                         \
+                                                                               \
+  if (cache_type == type && print_type == PRINT_ACCESS) {                      \
+    access_pattern = (uint32_t *)calloc(n_rows * n_cols, sizeof(uint32_t));    \
+    assert(access_pattern != NULL);                                            \
+    access_pattern_rows = n_rows;                                              \
+    access_pattern_cols = n_cols;                                              \
+  }                                                                            \
+                                                                               \
   long double total_time = 0;                                                  \
   long double total_cycles = 0;                                                \
                                                                                \
-  MEASURE(total_time, total_cycles, logic);
-
-#define GET_CACHE(var, i, j) *(var + ((i) * var##_cols) + (j))
-
-#define GET_CACHE_OR_CALC(mode, var, math)                                     \
-  (cache_type >= mode) ? GET_CACHE(var, n, k) : math(n, k, d);
+  MEASURE(total_time, total_cycles, logic);                                    \
+                                                                               \
+  if (print_type == PRINT_BUILD) {                                             \
+    printf("n = %5d, k = %5d, d = %5d, c = %6s, "                              \
+           "avg time = %14.2Lf ns, avg cycles = %14.2Lf\n",                    \
+           n, k, d, desc, total_time, total_cycles);                           \
+  } else if (cache_type == type && print_type == PRINT_LENGTH) {               \
+    PRINT_MATRIX_LG(var, n_rows, n_cols);                                      \
+  }
 
 static const struct option long_options[] = {
     {"sum", required_argument, 0, 'n'},
@@ -107,6 +153,7 @@ static const struct option long_options[] = {
     {"iterations", required_argument, 0, 'i'},
     {"cache", required_argument, 0, 'c'},
     {"target", required_argument, 0, 'm'},
+    {"print", required_argument, 0, 'p'},
     {0, 0, 0, 0},
 };
 
@@ -150,7 +197,7 @@ uintx bin_uiui(const uint16_t n, const uint16_t k, const uint16_t d) {
 }
 
 uintx bin(const uint16_t n, const uint16_t k, const uint16_t d) {
-  return GET_CACHE_OR_CALC(BIN_CACHE, bin_cache, bin_uiui);
+  GET_CACHE_OR_CALC(BIN_CACHE, bin_cache, bin_uiui);
 }
 
 uintx inner_bic_with_sums(const uint16_t n, const uint16_t k, const uint16_t d,
@@ -187,12 +234,12 @@ uintx inner_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
 }
 
 uintx bic(const uint16_t n, const uint16_t k, const uint16_t d) {
-  return GET_CACHE_OR_CALC(COMB_CACHE, comb_cache, inner_bic);
+  GET_CACHE_OR_CALC(COMB_CACHE, comb_cache, inner_bic);
 }
 
 void build_bin_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   (void)d;
-  BUILD_CACHE(n + k + 1, k, bin_cache, {
+  BUILD_CACHE(n + k + 1, k, bin_cache, BIN_CACHE, "bin", {
     GET_CACHE(bin_cache, 0, 0) = 1;
     for (uint32_t row = 1; row < n_rows; ++row) {
       GET_CACHE(bin_cache, row, 0) = 1;
@@ -203,12 +250,10 @@ void build_bin_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
       }
     }
   });
-  (void)total_time;
-  (void)total_cycles;
 }
 
 void build_comb_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
-  BUILD_CACHE(n + 1, k + 1, comb_cache, {
+  BUILD_CACHE(n + 1, k + 1, comb_cache, COMB_CACHE, "comb", {
     GET_CACHE(comb_cache, 0, 0) = 1;
     for (uint16_t row = 0; row < n_rows; ++row) {
       for (uint16_t col = 1; col < n_cols; ++col) {
@@ -216,8 +261,6 @@ void build_comb_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
       }
     }
   });
-  (void)total_time;
-  (void)total_cycles;
 }
 
 long double lg_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
@@ -349,7 +392,7 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
                    uint16_t *d, uint32_t *iterations, unrank_func *unrank,
                    uint16_t *m) {
   for (;;) {
-    int c = getopt_long(argc, argv, "n:k:d:a:i:c:m:", long_options, NULL);
+    int c = getopt_long(argc, argv, "n:k:d:a:i:c:m:p:", long_options, NULL);
     if (c == -1) {
       break;
     }
@@ -396,6 +439,19 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
     case 'm':
       *m = strtol(optarg, NULL, 0);
       break;
+    case 'p':
+      if (strcmp(optarg, "none") == 0) {
+        print_type = PRINT_STATS;
+      } else if (strcmp(optarg, "access") == 0) {
+        print_type = PRINT_ACCESS;
+      } else if (strcmp(optarg, "length") == 0) {
+        print_type = PRINT_LENGTH;
+      } else if (strcmp(optarg, "build") == 0) {
+        print_type = PRINT_BUILD;
+      } else if (fprintf(stderr, "Invalid parameter.\n")) {
+        return 1;
+      }
+      break;
     default:
       return 1;
     }
@@ -439,7 +495,14 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
         "           * `acc` (accumulated sums of #C(n, k, d)).\n"
         "\n"
         "  -m, --target=<uint16_t>\n"
-        "         Target security level, in bits.\n",
+        "         Target security level, in bits.\n"
+        "\n"
+        "  -p, --print=<mode>\n"
+        "         Show information about the pre-computed cache.\n"
+        "         Available options are:\n"
+        "           * `access` (count how frequently elements are accessed);\n"
+        "           * `length` (show bit length of all elements);\n"
+        "           * `build` (measure performance of building the cache).\n",
         argv[0]);
     (void)ret;
     return 1;
@@ -514,10 +577,15 @@ int32_t main(int32_t argc, char **argv) {
     check_valid_bounded_composition(comp, n, k, d);
   }
 
-  printf("n = %5d, k = %5d, d = %5d, i = %5u, m = %10.4Lf, "
-         "avg time = %14.2Lf ns, avg cycles = %14.2Lf\n",
-         n, k, d, iterations, lg_bic(n, k, d), total_time / iterations,
-         total_cycles / iterations);
+  if (print_type == PRINT_STATS) {
+    printf("n = %5d, k = %5d, d = %5d, i = %5u, m = %10.4Lf, "
+           "avg time = %14.2Lf ns, avg cycles = %14.2Lf\n",
+           n, k, d, iterations, lg_bic(n, k, d), total_time / iterations,
+           total_cycles / iterations);
+  } else if (print_type == PRINT_ACCESS) {
+    PRINT_MATRIX_INT(access_pattern, access_pattern_rows, access_pattern_cols);
+    free(access_pattern);
+  }
 
   if (cache_type >= BIN_CACHE) {
     free(bin_cache);
