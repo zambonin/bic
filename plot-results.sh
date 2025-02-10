@@ -3,26 +3,26 @@
 IT="${1:-$(make -pqrR | awk '/^IT/ { print $NF }')}"
 
 SECURITY="256 512"
+BACKENDS="bitint boost-fix boost-arb mpz tom"
 ALGORITHMS="colex colexpart emk enup"
 CACHE_STRAT="none bin comb"
 
 for LEVEL in $SECURITY ; do
-  ALL_DATA_PATH="$TMPDIR/bitint-cycles-all-m-$LEVEL-it-$IT.dat"
-  rm -f $TMPDIR/bitint-cycles-test-m-$LEVEL-*.dat "$ALL_DATA_PATH"
+  ALL_DATA_PATH="$TMPDIR/c-cycles-all-m-$LEVEL-it-$IT.dat"
+  rm -f $TMPDIR/c-*-cycles-test-m-$LEVEL-*.dat "$ALL_DATA_PATH"
 
-  for ALG in $ALGORITHMS ; do
-    for CACHE in $CACHE_STRAT ; do
-      RAW_DATA_PATH="$TMPDIR/bitint-cycles-test-m-$LEVEL-it-$IT-a-$ALG-c-$CACHE.dat"
-      echo "$RAW_DATA_PATH"
-      (
-        echo "$ALG-$CACHE"
+  for IMPL in $BACKENDS ; do
+    for ALG in $ALGORITHMS ; do
+      for CACHE in $CACHE_STRAT ; do
+        RAW_DATA_PATH="$TMPDIR/c-$IMPL-cycles-test-m-$LEVEL-it-$IT-a-$ALG-c-$CACHE.dat"
+        echo "$IMPL-$ALG-$CACHE" | tee "$RAW_DATA_PATH"
         make --silent IT="$IT" ALG="$ALG" CACHE="$CACHE" \
-          clean "$IMPL" "test-$LEVEL"
-      ) >| "$RAW_DATA_PATH"
+          clean "$IMPL" "test-$LEVEL" >> "$RAW_DATA_PATH"
+      done
     done
   done
 
-  paste -d" " $TMPDIR/bitint-cycles-test-m-$LEVEL-*.dat \
+  paste -d" " $TMPDIR/c-*-cycles-test-m-$LEVEL-*.dat \
     | awk '
         NR == 1 { print "k", $0 }
         NR != 1 {

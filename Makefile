@@ -1,5 +1,5 @@
-CC = clang
-CFLAGS = -Wall -Wextra -pedantic -O3 -ffast-math -std=gnu23 -march=native -mtune=native
+CC = clang++
+CFLAGS = -Wall -Wextra -pedantic -O3 -ffast-math -std=gnu23 -march=native -mtune=native -x c++
 LDFLAGS = -lm
 SRC = src/unrank.c
 OUT = $(basename $(SRC))
@@ -7,7 +7,25 @@ IT = 128
 ALG = colex
 CACHE = none
 
-all: $(OUT)
+default:
+
+bitint: CC = clang
+bitint: CFLAGS := $(patsubst -x c++,-DBITINT,$(CFLAGS))
+bitint: $(OUT)
+
+boost-fix: CFLAGS := $(patsubst -std=gnu23,-DBOOST_FIX_INT,$(CFLAGS))
+boost-fix: $(OUT)
+
+boost-arb: CFLAGS := $(patsubst -std=gnu23,-DBOOST_ARB_INT,$(CFLAGS))
+boost-arb: $(OUT)
+
+mpz: CFLAGS := $(patsubst -std=gnu23,-DBOOST_MPZ_INT,$(CFLAGS))
+mpz: LDFLAGS += -lgmp
+mpz: $(OUT)
+
+tom: CFLAGS := $(patsubst -std=gnu23,-DBOOST_TOM_INT,$(CFLAGS))
+tom: LDFLAGS += -ltommath
+tom: $(OUT)
 
 %.test: $(OUT)
 	./$< -m $(subst -, -k ,$*) -a $(ALG) -i $(IT) -c $(CACHE)

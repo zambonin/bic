@@ -13,12 +13,42 @@ enum {
   BIN_CACHE = 1,
   COMB_CACHE = 2,
   ACC_COMB_CACHE = 3,
-  BIT_LENGTH = 2 * (256 + 64 + 32),
+  BIT_LENGTH = 512 + 64,
   NS_TO_SEC = 1000000000,
 };
 
+#if defined(BOOST_FIX_INT)
+#include <boost/multiprecision/cpp_int.hpp>
+
+using uintx = boost::multiprecision::checked_uint512_t;
+using intx = boost::multiprecision::checked_int512_t;
+#elif defined(BOOST_ARB_INT)
+#include <boost/multiprecision/cpp_int.hpp>
+
+using uintx = boost::multiprecision::cpp_int;
+using intx = boost::multiprecision::cpp_int;
+#elif defined(BOOST_MPZ_INT)
+#include <boost/multiprecision/gmp.hpp>
+
+using uintx = boost::multiprecision::mpz_int;
+using intx = boost::multiprecision::mpz_int;
+#elif defined(BOOST_TOM_INT)
+#include <boost/multiprecision/tommath.hpp>
+
+using uintx = boost::multiprecision::tom_int;
+using intx = boost::multiprecision::tom_int;
+#endif
+
+#if defined(BITINT)
 typedef unsigned _BitInt(BIT_LENGTH) uintx;
 typedef _BitInt(BIT_LENGTH) intx;
+#else
+#include <boost/multiprecision/cpp_bin_float.hpp>
+#include <boost/random.hpp>
+#include <random>
+
+static std::random_device rd;
+#endif
 
 typedef void (*unrank_func)(uint16_t *, const uint16_t, const uint16_t,
                             const uint16_t, uintx);
@@ -88,6 +118,14 @@ static uint64_t cpucycles(void) {
 }
 
 uint32_t min(const uint32_t a, const uint32_t b) { return (a < b) ? a : b; }
+
+#if defined(BITINT)
+long double logl2(const uintx u) { return logl(u) / log(2); }
+#else
+long double logl2(const uintx u) {
+  return (long double)log2(boost::multiprecision::cpp_bin_float_100(u));
+}
+#endif
 
 // from FXT: aux0/binomial.h
 uintx bin_uiui(const uint16_t n, const uint16_t k, const uint16_t d) {
@@ -183,7 +221,7 @@ void build_comb_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
 }
 
 long double lg_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
-  return logl(inner_bic_with_sums(n, k, d, NULL, bin_uiui)) / log(2);
+  return logl2(inner_bic_with_sums(n, k, d, NULL, bin_uiui));
 }
 
 void get_min_params(const uint16_t m, uint16_t *n, const uint16_t k,
@@ -417,6 +455,7 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
 }
 
 uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d) {
+#if defined(BITINT)
   long double comb_lg = lg_bic(n, k, d);
   uint16_t len = (1 + comb_lg) / sizeof(uint64_t);
 
@@ -434,6 +473,10 @@ uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d) {
   free(message);
 
   return rank;
+#else
+  boost::random::uniform_int_distribution<uintx> ui(0, inner_bic(n, k, d));
+  return ui(rd);
+#endif
 }
 
 int32_t main(int32_t argc, char **argv) {

@@ -7,18 +7,23 @@ types to C (N2763, standardized in C23). Therefore, a recent enough compiler is
 needed; GCC and Clang were successfully tested.
 
 This is an alternative to GMP-based implementations for use cases where the
-library is not available or cannot be used. Type `make` to compile the code and
-`./src/unrank` to see the available options.
+library is not available or cannot be used. Nonetheless, there are C++ backends
+available to show the performance differences.
+
+Type `make $BACKEND` to compile the code, where $BACKEND is one of
+{bitint,boost-fix,boost-arb,mpz,tom} and `./src/unrank` to see the available
+options. Of course, the necessary dependencies must be installed in the system.
 
 Typing `make IT=$N test` unranks $N random integers for several parameter sets.
 Other variables that control the behavior of the program can also be passed to
 the Makefile to experiment with specific parameters. For instance, the command
 
-  `make ALG=colexpart IT=1024 CACHE=bin test-256`
+  `make clean boost-fix ALG=colexpart IT=1024 CACHE=bin test-256`
 
 will run tests for the unranking algorithm to the co-lexicographic order which
-reuses partial sums, with a pre-computed cache of binomial coefficients, for
-1024 repetitions at the 256-bit security level.
+reuses partial sums, using a wide Boost fixed-integer type for the arithmetic,
+with a pre-computed cache of binomial coefficients, for 1024 repetitions at the
+256-bit security level.
 
 There are equivalent `make leak` commands, which use Valgrind to check that the
 code is free of memory leaks.
