@@ -4,6 +4,7 @@ LDFLAGS = -lm
 SRC = src/unrank.c
 OUT = $(basename $(SRC))
 
+RANGE = $(shell seq 30 80)
 IT = 128
 ALG = colex
 CACHE = none
@@ -32,9 +33,10 @@ tom: $(OUT)
 %.test: $(OUT)
 	./$< -m $(subst -, -k ,$*) -a $(ALG) -i $(IT) -c $(CACHE) -p $(PRINT)
 
-test-256: $(foreach K,$(shell seq 30 80),256-$(K).test)
-test-512: $(foreach K,$(shell seq 60 140),512-$(K).test)
-test: test-256 test-512
+test-128: $(foreach K,$(RANGE),128-$(K).test)
+test-192: $(foreach K,$(RANGE),192-$(K).test)
+test-256: $(foreach K,$(RANGE),256-$(K).test)
+test: test-128 test-192 test-256
 
 %.leak: $(OUT) /usr/bin/valgrind
 	valgrind --quiet --exit-on-first-error=yes --leak-check=full \
@@ -42,18 +44,20 @@ test: test-256 test-512
 		./$< -m $(subst -, -k ,$*) -a $(ALG) -i $(IT) -c $(CACHE) -p $(PRINT) \
 		2>/dev/null
 
-leak-256: $(foreach K,$(shell seq 30 80),256-$(K).leak)
-leak-512: $(foreach K,$(shell seq 60 140),512-$(K).leak)
-leak: leak-256 leak-512
+leak-128: $(foreach K,$(RANGE),128-$(K).leak)
+leak-192: $(foreach K,$(RANGE),192-$(K).leak)
+leak-256: $(foreach K,$(RANGE),256-$(K).leak)
+leak: leak-128 leak-192 leak-256
 
 %.stats.png: $(OUT) /usr/bin/gnuplot
 	./$< -m $(subst -, -k ,$*) -a $(ALG) -i $(IT) -c $(CACHE) -p $(PRINT) \
 		| gnuplot -e "set terminal png size 2560, 1440; \
 			plot '/dev/stdin' matrix with image notitle" > $@
 
-stats-256: $(foreach K,$(shell seq 30 80),256-$(K).stats.png)
-stats-512: $(foreach K,$(shell seq 60 140),512-$(K).stats.png)
-stats: stats-256 stats-512
+stats-128: $(foreach K,$(RANGE),128-$(K).stats.png)
+stats-192: $(foreach K,$(RANGE),192-$(K).stats.png)
+stats-256: $(foreach K,$(RANGE),256-$(K).stats.png)
+stats: stats-128 stats-192 stats-256
 
 clean-stats:
 	$(RM) $(wildcard *.stats.png)
