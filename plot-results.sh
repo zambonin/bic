@@ -4,7 +4,7 @@ IT="${1:-$(make -pqrR | awk '/^IT/ { print $NF }')}"
 
 SECURITY="256 512"
 BACKENDS="bitint boost-fix boost-arb mpz tom"
-ALGORITHMS="colex colexpart emk enup"
+ALGORITHMS="colex colexpart gray"
 CACHE_STRAT="none bin comb"
 
 for LEVEL in $SECURITY ; do

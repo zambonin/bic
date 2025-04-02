@@ -60,8 +60,7 @@ typedef uintx (*math_func)(const uint16_t, const uint16_t, const uint16_t);
 
 void colex(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
 void colex_part(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
-void enup(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
-void emk(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
+void gray(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
 
 static int cache_type = NO_CACHE;
 static uintx *bin_cache;
@@ -341,26 +340,7 @@ void colex_part(uint16_t *rop, const uint16_t n, const uint16_t k,
   free(prev_sum);
 }
 
-void enup(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
-          uintx rank) {
-  uint16_t it_n = n;
-  uint16_t part = 0;
-  uintx count = 0;
-
-  // rank = bic(it_n, k, d) - 1 - rank;
-  for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
-    for (part = 0; count = bic(it_n - part, i, d), rank >= count;
-         ++part, rank -= count) {
-    }
-    if (!(part & 1U)) {
-      rank = count - 1 - rank;
-    }
-  }
-
-  rop[0] = it_n;
-}
-
-void emk(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
+void gray(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
          uintx rank) {
   uint16_t it_n = n;
   uint16_t part = 0;
@@ -412,10 +392,8 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
         *unrank = colex;
       } else if (strcmp(optarg, "colexpart") == 0) {
         *unrank = colex_part;
-      } else if (strcmp(optarg, "enup") == 0) {
-        *unrank = enup;
-      } else if (strcmp(optarg, "emk") == 0) {
-        *unrank = emk;
+      } else if (strcmp(optarg, "gray") == 0) {
+        *unrank = gray;
       } else if (fprintf(stderr, "Invalid parameter.\n")) {
         return 1;
       }
@@ -481,8 +459,7 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
         "           * `colex` (co-lexicographic order);\n"
         "           * `colexpart` (co-lexicographic order reusing partial "
         "sums);\n"
-        "           * `enup` (even numbers up, odd numbers down);\n"
-        "           * `emk` (Eades--McKay sequence).\n"
+        "           * `gray` (strong minimal-change Gray order).\n"
         "\n"
         "  -i, --iterations=<uint64_t>\n"
         "         Number to repeatedly unrank random integers.\n"
