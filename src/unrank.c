@@ -498,6 +498,7 @@ uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d) {
 #if defined(BITINT)
   long double comb_lg = lg_bic(n, k, d);
   uint16_t len = (1 + comb_lg) / sizeof(uint64_t);
+  len += (len == 0);
 
   uint8_t *message = (uint8_t *)calloc(len, sizeof(uint8_t));
   for (uint16_t i = 0; i < len; ++i) {
@@ -512,7 +513,7 @@ uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d) {
   }
   free(message);
 
-  return rank;
+  return rank % inner_bic(n, k, d);
 #else
   boost::random::uniform_int_distribution<uintx> ui(0, inner_bic(n, k, d));
   return ui(rd);
