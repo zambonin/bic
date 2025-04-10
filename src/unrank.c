@@ -59,6 +59,7 @@ typedef void (*unrank_func)(uint16_t *, const uint16_t, const uint16_t,
 typedef uintx (*math_func)(const uint16_t, const uint16_t, const uint16_t);
 
 void colex(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
+void colex_bs(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
 void colex_part(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
 void gray(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
 
@@ -75,6 +76,48 @@ static int print_type = PRINT_STATS;
 static uint32_t *access_pattern;
 static uint32_t access_pattern_rows = 0;
 static uint32_t access_pattern_cols = 0;
+
+// from https://stackoverflow.com/a/40245287
+typedef struct {
+  const void *key;
+  int (*const compar)(const void *, const void *);
+  void *last_visited;
+} bsearch_insertion_state;
+
+static int bsearch_insertion_compare(const void *a, const void *b) {
+  bsearch_insertion_state *state = (bsearch_insertion_state *)a;
+  state->last_visited = (void *)b;
+  return state->compar(state->key, b);
+}
+
+size_t bsearch_insertion(const void *key, const void *base, size_t nel,
+                         size_t width,
+                         int (*compar)(const void *, const void *)) {
+  bsearch_insertion_state state = {key, compar, NULL};
+  bsearch(&state, base, nel, width, bsearch_insertion_compare);
+
+  uintx *last = (uintx *)state.last_visited;
+  if (*((uintx *)key) < *last) {
+    --last;
+  }
+
+  return last - (uintx *)base;
+}
+
+static int cmp(const void *c, const void *d) {
+  uintx a = *(uintx *)c;
+  uintx b = *(uintx *)d;
+
+  if (a < b) {
+    return -1;
+  }
+
+  if (a >= b) {
+    return 1;
+  }
+
+  return 0;
+}
 
 #define GET_CACHE(var, i, j) *(var + ((i) * var##_cols) + (j))
 
@@ -354,6 +397,21 @@ void colex(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
   rop[0] = it_n;
 }
 
+void colex_bs(uint16_t *rop, const uint16_t n, const uint16_t k,
+              const uint16_t d, uintx rank) {
+  uint16_t it_n = n;
+  uint16_t part = 0;
+
+  for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
+    uintx *sums = acc(it_n, i, d);
+    size_t length = (size_t)sums[d + 2];
+    part = bsearch_insertion(&rank, sums, length, sizeof(uintx), cmp);
+    rank -= sums[part];
+  }
+
+  rop[0] = it_n;
+}
+
 void colex_part(uint16_t *rop, const uint16_t n, const uint16_t k,
                 const uint16_t d, uintx rank) {
   uint16_t it_n = n;
@@ -439,6 +497,8 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
     case 'a':
       if (strcmp(optarg, "colex") == 0) {
         *unrank = colex;
+      } else if (strcmp(optarg, "colexbs") == 0) {
+        *unrank = colex_bs;
       } else if (strcmp(optarg, "colexpart") == 0) {
         *unrank = colex_part;
       } else if (strcmp(optarg, "gray") == 0) {
