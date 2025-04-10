@@ -1,5 +1,5 @@
 CC = clang++
-CFLAGS = -Wall -Wextra -pedantic -O3 -ffast-math -std=gnu23 -march=native -mtune=native -x c++
+CFLAGS = -Wall -Wextra -pedantic -O3 -ffast-math -march=native -mtune=native
 LDFLAGS = -lm
 SRC = src/unrank.c
 OUT = $(basename $(SRC))
@@ -13,20 +13,20 @@ PRINT = none
 default:
 
 bitint: CC = clang
-bitint: CFLAGS := $(patsubst -x c++,-DBITINT,$(CFLAGS))
+bitint: CFLAGS += -std=gnu23 -DBITINT
 bitint: $(OUT)
 
-boost-fix: CFLAGS := $(patsubst -std=gnu23,-DBOOST_FIX_INT,$(CFLAGS))
+boost-fix: CFLAGS += -x c++ -DBOOST_FIX_INT
 boost-fix: $(OUT)
 
-boost-arb: CFLAGS := $(patsubst -std=gnu23,-DBOOST_ARB_INT,$(CFLAGS))
+boost-arb: CFLAGS += -x c++ -DBOOST_ARB_INT
 boost-arb: $(OUT)
 
-mpz: CFLAGS := $(patsubst -std=gnu23,-DBOOST_MPZ_INT,$(CFLAGS))
+mpz: CFLAGS += -x c++ -DBOOST_MPZ_INT
 mpz: LDFLAGS += -lgmp
 mpz: $(OUT)
 
-tom: CFLAGS := $(patsubst -std=gnu23,-DBOOST_TOM_INT,$(CFLAGS))
+tom: CFLAGS += -x c++ -DBOOST_TOM_INT
 tom: LDFLAGS += -ltommath
 tom: $(OUT)
 
@@ -38,6 +38,9 @@ test-192: $(foreach K,$(RANGE),192-$(K).test)
 test-256: $(foreach K,$(RANGE),256-$(K).test)
 test: test-128 test-192 test-256
 
+%.leak: CC = clang
+%.leak: CFLAGS += -std=gnu23 -DBITINT -mno-avx512f
+%.leak: IT = 1
 %.leak: $(OUT) /usr/bin/valgrind
 	valgrind --quiet --exit-on-first-error=yes --leak-check=full \
 		--errors-for-leak-kinds=all --show-leak-kinds=all --error-exitcode=1 \
