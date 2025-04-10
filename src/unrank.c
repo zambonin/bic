@@ -67,6 +67,9 @@ static uintx *bin_cache;
 static uint16_t bin_cache_cols = 0;
 static uintx *comb_cache;
 static uint16_t comb_cache_cols = 0;
+static uintx **acc_cache;
+static uint16_t acc_cache_rows = 0;
+static uint16_t acc_cache_cols = 0;
 
 static int print_type = PRINT_STATS;
 static uint32_t *access_pattern;
@@ -236,6 +239,26 @@ uintx bic(const uint16_t n, const uint16_t k, const uint16_t d) {
   GET_CACHE_OR_CALC(COMB_CACHE, comb_cache, inner_bic);
 }
 
+uintx *inner_acc(const uint16_t n, const uint16_t k, const uint16_t d) {
+  size_t length = d + 3;
+  size_t i = 0;
+  uintx *rop = (uintx *)calloc(length, sizeof(uintx));
+  uintx sum = 0;
+
+  rop[0] = 0;
+  for (; i <= min(n, d); ++i) {
+    sum += bic(n - i, k, d);
+    rop[i + 1] = sum;
+  }
+  rop[length - 1] = i;
+
+  return rop;
+}
+
+uintx *acc(const uint16_t n, const uint16_t k, const uint16_t d) {
+  GET_CACHE_OR_CALC(ACC_COMB_CACHE, acc_cache, inner_acc);
+}
+
 void build_bin_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   (void)d;
   BUILD_CACHE(n + k + 1, k, bin_cache, BIN_CACHE, "bin", {
@@ -260,6 +283,23 @@ void build_comb_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
       }
     }
   });
+}
+
+void build_acc_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
+  uint32_t n_rows = n + 1;
+  uint32_t n_cols = k;
+
+  acc_cache_rows = n_rows;
+  acc_cache_cols = n_cols;
+
+  acc_cache = (uintx **)calloc(n_rows * n_cols, sizeof(uintx *));
+  assert(acc_cache != NULL);
+
+  for (uint16_t row = 0; row < n_rows; ++row) {
+    for (uint16_t col = 0; col < n_cols; ++col) {
+      GET_CACHE(acc_cache, row, col) = inner_acc(row, col, d);
+    }
+  }
 }
 
 long double lg_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
@@ -296,9 +336,18 @@ void colex(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
   uint16_t part = 0;
   uintx count = 0;
 
-  for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
-    for (part = 0; count = bic(it_n - part, i, d), rank >= count;
-         ++part, rank -= count) {
+  if (cache_type == ACC_COMB_CACHE) {
+    for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
+      uintx *sums = acc(it_n, i, d);
+      for (part = 0; count = sums[part + 1], rank >= count; ++part) {
+      }
+      rank -= sums[part];
+    }
+  } else {
+    for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
+      for (part = 0; count = bic(it_n - part, i, d), rank >= count;
+           ++part, rank -= count) {
+      }
     }
   }
 
@@ -341,7 +390,7 @@ void colex_part(uint16_t *rop, const uint16_t n, const uint16_t k,
 }
 
 void gray(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
-         uintx rank) {
+          uintx rank) {
   uint16_t it_n = n;
   uint16_t part = 0;
   uintx count = 0;
@@ -538,6 +587,9 @@ int32_t main(int32_t argc, char **argv) {
     build_bin_cache(n, k, d);
     if (cache_type >= COMB_CACHE) {
       build_comb_cache(n, k, d);
+      if (cache_type >= ACC_COMB_CACHE) {
+        build_acc_cache(n, k, d);
+      }
     }
   }
 
@@ -569,6 +621,14 @@ int32_t main(int32_t argc, char **argv) {
     free(bin_cache);
     if (cache_type >= COMB_CACHE) {
       free(comb_cache);
+      if (cache_type >= ACC_COMB_CACHE) {
+        for (uint16_t i = 0; i < acc_cache_rows; ++i) {
+          for (uint16_t j = 0; j < acc_cache_cols; ++j) {
+            free(GET_CACHE(acc_cache, i, j));
+          }
+        }
+        free(acc_cache);
+      }
     }
   }
 
