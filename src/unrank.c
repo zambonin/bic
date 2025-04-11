@@ -62,6 +62,7 @@ void colex(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
 void colex_bs(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
 void colex_part(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
 void gray(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
+void rbo(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
 
 static int cache_type = NO_CACHE;
 static uintx *bin_cache;
@@ -465,6 +466,40 @@ void gray(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
   rop[0] = it_n;
 }
 
+void inner_rbo(uint16_t *rop, const uint16_t n, const uint16_t k,
+               const uint16_t d, uintx rank, uint16_t start) {
+  if (k == 1) {
+    rop[start] = n;
+    return;
+  }
+
+  uint16_t left = (uint16_t)(k / 2);
+  uint16_t right = k - left;
+
+  uint16_t leftSum = 0;
+  uintx partSum = 0;
+
+  uint16_t s = 0;
+  for (uintx count = 0; s <= min(n, left * d) && count <= rank;
+       ++s, count += bic(n - s + 1, left, d) * bic(s - 1, right, d)) {
+    leftSum = s;
+    partSum = count;
+  }
+
+  uint16_t rightSum = n - leftSum;
+  uintx rightPoints = bic(rightSum, right, d);
+  uintx leftRank = (rank - partSum) / rightPoints;
+  uintx rightRank = (rank - partSum) % rightPoints;
+
+  inner_rbo(rop, leftSum, left, d, leftRank, start);
+  inner_rbo(rop, rightSum, right, d, rightRank, start + left);
+}
+
+void rbo(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
+         uintx rank) {
+  inner_rbo(rop, n, k, d, rank, 0);
+}
+
 void check_valid_bounded_composition(const uint16_t *c, const uint16_t n,
                                      const uint16_t k, const uint16_t d) {
   uint16_t sum = 0;
@@ -503,6 +538,8 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
         *unrank = colex_part;
       } else if (strcmp(optarg, "gray") == 0) {
         *unrank = gray;
+      } else if (strcmp(optarg, "rbo") == 0) {
+        *unrank = rbo;
       } else if (fprintf(stderr, "Invalid parameter.\n")) {
         return 1;
       }
