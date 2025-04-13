@@ -55,14 +55,14 @@ static std::random_device rd;
 #endif
 
 typedef void (*unrank_func)(uint16_t *, const uint16_t, const uint16_t,
-                            const uint16_t, uintx);
+                            const uint16_t, const uintx);
 typedef uintx (*math_func)(const uint16_t, const uint16_t, const uint16_t);
 
-void colex(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
-void colex_bs(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
-void colex_part(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
-void gray(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
-void rbo(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx rank);
+void colex(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx r);
+void colex_bs(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx r);
+void colex_part(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx r);
+void gray(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx r);
+void rbo(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx r);
 
 static int cache_type = NO_CACHE;
 static uintx *bin_cache;
@@ -375,8 +375,9 @@ void get_min_params(const uint16_t m, uint16_t *n, const uint16_t k,
 }
 
 void colex(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
-           uintx rank) {
+           const uintx r) {
   uint16_t it_n = n;
+  uintx rank = r;
   uint16_t part = 0;
   uintx count = 0;
 
@@ -399,8 +400,9 @@ void colex(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
 }
 
 void colex_bs(uint16_t *rop, const uint16_t n, const uint16_t k,
-              const uint16_t d, uintx rank) {
+              const uint16_t d, const uintx r) {
   uint16_t it_n = n;
+  uintx rank = r;
   uint16_t part = 0;
 
   for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
@@ -414,8 +416,9 @@ void colex_bs(uint16_t *rop, const uint16_t n, const uint16_t k,
 }
 
 void colex_part(uint16_t *rop, const uint16_t n, const uint16_t k,
-                const uint16_t d, uintx rank) {
+                const uint16_t d, const uintx r) {
   uint16_t it_n = n;
+  uintx rank = r;
   uint16_t part = 0;
 
   uint16_t j = min(k - 1, it_n / (d + 1));
@@ -449,8 +452,9 @@ void colex_part(uint16_t *rop, const uint16_t n, const uint16_t k,
 }
 
 void gray(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
-          uintx rank) {
+          const uintx r) {
   uint16_t it_n = n;
+  uintx rank = r;
   uint16_t part = 0;
   uintx count = 0;
 
@@ -467,7 +471,9 @@ void gray(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
 }
 
 void inner_rbo(uint16_t *rop, const uint16_t n, const uint16_t k,
-               const uint16_t d, uintx rank, uint16_t start) {
+               const uint16_t d, const uintx r, const uint16_t start) {
+  uintx rank = r;
+
   if (k == 1) {
     rop[start] = n;
     return;
@@ -496,8 +502,8 @@ void inner_rbo(uint16_t *rop, const uint16_t n, const uint16_t k,
 }
 
 void rbo(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
-         uintx rank) {
-  inner_rbo(rop, n, k, d, rank, 0);
+         const uintx r) {
+  inner_rbo(rop, n, k, d, r, 0);
 }
 
 void check_valid_bounded_composition(const uint16_t *c, const uint16_t n,
@@ -697,9 +703,9 @@ int32_t main(int32_t argc, char **argv) {
   for (uint32_t it = 0; it < iterations; ++it) {
     memset(comp, 0, k * sizeof(uint16_t));
 
-    uintx rank = random_rank(n, k, d);
+    const uintx r = random_rank(n, k, d);
 
-    MEASURE(total_time, total_cycles, (*unrank)(comp, n, k, d, rank));
+    MEASURE(total_time, total_cycles, (*unrank)(comp, n, k, d, r));
 
     check_valid_bounded_composition(comp, n, k, d);
   }
