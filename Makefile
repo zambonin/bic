@@ -9,6 +9,8 @@ IT = 128
 ALG = colex
 CACHE = none
 PRINT = none
+STRATEGY = gen
+PARAMS = -a $(ALG) -i $(IT) -c $(CACHE) -p $(PRINT) -s $(STRATEGY)
 
 default:
 
@@ -31,7 +33,7 @@ tom: LDFLAGS += -ltommath
 tom: $(OUT)
 
 %.test: $(OUT)
-	./$< -m $(subst -, -k ,$*) -a $(ALG) -i $(IT) -c $(CACHE) -p $(PRINT)
+	./$< -m $(subst -, -k ,$*) $(PARAMS)
 
 test-128: $(foreach K,$(RANGE),128-$(K).test)
 test-192: $(foreach K,$(RANGE),192-$(K).test)
@@ -44,8 +46,7 @@ test: test-128 test-192 test-256
 %.leak: $(OUT) /usr/bin/valgrind
 	valgrind --quiet --exit-on-first-error=yes --leak-check=full \
 		--errors-for-leak-kinds=all --show-leak-kinds=all --error-exitcode=1 \
-		./$< -m $(subst -, -k ,$*) -a $(ALG) -i $(IT) -c $(CACHE) -p $(PRINT) \
-		2>/dev/null
+		./$< -m $(subst -, -k ,$*) $(PARAMS) 2>/dev/null
 
 leak-128: $(foreach K,$(RANGE),128-$(K).leak)
 leak-192: $(foreach K,$(RANGE),192-$(K).leak)
@@ -53,7 +54,7 @@ leak-256: $(foreach K,$(RANGE),256-$(K).leak)
 leak: leak-128 leak-192 leak-256
 
 %.stats.png: $(OUT) /usr/bin/gnuplot
-	./$< -m $(subst -, -k ,$*) -a $(ALG) -i $(IT) -c $(CACHE) -p $(PRINT) \
+	./$< -m $(subst -, -k ,$*) $(PARAMS) \
 		| gnuplot -e "set terminal png size 2560, 1440; \
 			plot '/dev/stdin' matrix with image notitle" > $@
 

@@ -56,6 +56,8 @@ static std::random_device rd;
 
 typedef void (*unrank_func)(uint16_t *, const uint16_t, const uint16_t,
                             const uint16_t, const uintx);
+typedef void (*strategy_func)(const uint16_t, uint16_t *, const uint16_t,
+                              uint16_t *);
 typedef uintx (*math_func)(const uint16_t, const uint16_t, const uint16_t);
 
 void colex(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx r);
@@ -350,8 +352,7 @@ long double lg_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
   return logl2(inner_bic_with_sums(n, k, d, NULL, bin_uiui));
 }
 
-void get_min_params(const uint16_t m, uint16_t *n, const uint16_t k,
-                    uint16_t *d) {
+void mingen(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
   uint16_t it_d = 0;
   uint16_t it_n = (k * it_d) / 2;
 
@@ -369,6 +370,19 @@ void get_min_params(const uint16_t m, uint16_t *n, const uint16_t k,
     --it_n;
   }
   ++it_n;
+
+  *n = it_n;
+  *d = it_d;
+}
+
+void minver(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
+  uint16_t it_n;
+  for (it_n = 1; lg_bic(it_n, k, it_n) < m; ++it_n) {
+  }
+
+  uint16_t it_d;
+  for (it_d = 1; lg_bic(it_n, k, it_d) < m; ++it_d) {
+  }
 
   *n = it_n;
   *d = it_d;
@@ -518,9 +532,9 @@ void check_valid_bounded_composition(const uint16_t *c, const uint16_t n,
 
 int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
                    uint16_t *d, uint32_t *iterations, unrank_func *unrank,
-                   uint16_t *m) {
+                   uint16_t *m, strategy_func *strategy) {
   for (;;) {
-    int c = getopt_long(argc, argv, "n:k:d:a:i:c:m:p:", long_options, NULL);
+    int c = getopt_long(argc, argv, "n:k:d:a:i:c:m:p:s:", long_options, NULL);
     if (c == -1) {
       break;
     }
@@ -582,13 +596,22 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
         return 1;
       }
       break;
+    case 's':
+      if (strcmp(optarg, "gen") == 0) {
+        *strategy = mingen;
+      } else if (strcmp(optarg, "ver") == 0) {
+        *strategy = minver;
+      } else if (fprintf(stderr, "Invalid parameter.\n")) {
+        return 1;
+      }
+      break;
     default:
       return 1;
     }
   }
 
   if (*m != 0 && *k != 0 && *n == 0 && *d == 0) {
-    get_min_params(*m, n, *k, d);
+    (*strategy)(*m, n, *k, d);
   } else if (*n == 0 || *k == 0 || *d == 0) {
     int32_t ret = fprintf(
         stderr,
@@ -609,9 +632,13 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
         "         Use <alg> as the unranking algorithm of choice.\n"
         "         Available options are:\n"
         "           * `colex` (co-lexicographic order);\n"
-        "           * `colexpart` (co-lexicographic order reusing partial "
-        "sums);\n"
-        "           * `gray` (strong minimal-change Gray order).\n"
+        "           * `colexpart` (co-lexicographic order reusing partial\n"
+        "               sums);\n"
+        "           * `colexbs` (co-lexicographic order using binary search\n"
+        "               on accumulated sums);\n"
+        "           * `gray` (strong minimal-change Gray order);\n"
+        "           * `rbo` (recursive block order due to Miracle-Yilek;\n"
+        "               only works for `k` that are powers of 2).\n"
         "\n"
         "  -i, --iterations=<uint64_t>\n"
         "         Number to repeatedly unrank random integers.\n"
@@ -631,7 +658,13 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
         "         Available options are:\n"
         "           * `access` (count how frequently elements are accessed);\n"
         "           * `length` (show bit length of all elements);\n"
-        "           * `build` (measure performance of building the cache).\n",
+        "           * `build` (measure performance of building the cache).\n"
+        "\n"
+        "  -s, --strategy=<mode>\n"
+        "         Use <mode> to choose `n` and `d` according to `m` and `k`.\n"
+        "         Available options are:\n"
+        "           * `gen` (minimize `d` at all costs);\n"
+        "           * `ver` (minimize `n` at all costs).\n",
         argv[0]);
     (void)ret;
     return 1;
@@ -679,8 +712,10 @@ int32_t main(int32_t argc, char **argv) {
   uint16_t m = 0;
   uint32_t iterations = 1;
   unrank_func unrank = colex;
+  strategy_func strategy = minver;
 
-  if (parse_args(argc, argv, &n, &k, &d, &iterations, &unrank, &m) > 0) {
+  if (parse_args(argc, argv, &n, &k, &d, &iterations, &unrank, &m, &strategy) >
+      0) {
     return 1;
   }
 
