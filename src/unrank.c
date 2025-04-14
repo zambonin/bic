@@ -63,6 +63,7 @@ typedef uintx (*math_func)(const uint16_t, const uint16_t, const uint16_t);
 void colex(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx r);
 void colex_bs(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx r);
 void colex_part(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx r);
+void colex_dbcs(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx r);
 void gray(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx r);
 void rbo(uint16_t *rop, uint16_t n, uint16_t k, uint16_t d, uintx r);
 
@@ -213,6 +214,7 @@ static uint64_t cpucycles(void) {
 }
 
 uint32_t min(const uint32_t a, const uint32_t b) { return (a < b) ? a : b; }
+int32_t max(const int32_t a, const int32_t b) { return (a > b) ? a : b; }
 
 #if defined(BITINT)
 long double logl2(const uintx u) { return logl(u) / log(2); }
@@ -303,6 +305,30 @@ uintx *inner_acc(const uint16_t n, const uint16_t k, const uint16_t d) {
 
 uintx *acc(const uint16_t n, const uint16_t k, const uint16_t d) {
   GET_CACHE_OR_CALC(ACC_COMB_CACHE, acc_cache, inner_acc);
+}
+
+uintx bic_acc(const uint16_t n, const uint16_t k, const uint16_t d,
+              const uint16_t l) {
+  if (cache_type == ACC_COMB_CACHE) {
+    return acc(n, k, d)[l];
+  }
+
+  uint16_t j = min(k, n / (d + 1));
+  uint16_t u;
+
+  intx tmp = 0;
+  intx rop = 0;
+
+  for (uint16_t i = 0; i <= j; ++i) {
+    u = n - (d + 1) * i + k;
+    tmp = bin(k, i, d) * (bin(u, k, d) - bin(max(0, u - l), k, d));
+    if (i & 1U) {
+      tmp = -tmp;
+    }
+    rop += tmp;
+  }
+
+  return (uintx)rop;
 }
 
 void build_bin_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
@@ -465,6 +491,31 @@ void colex_part(uint16_t *rop, const uint16_t n, const uint16_t k,
   free(prev_sum);
 }
 
+void colex_dbcs(uint16_t *rop, const uint16_t n, const uint16_t k,
+                const uint16_t d, const uintx r) {
+  uint16_t it_n = n;
+  uintx rank = r;
+  uint16_t part = 0;
+  uintx count = 0;
+
+  for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
+    part = 0;
+    for (uint16_t c = min(it_n, d); c > 0;) {
+      uint16_t step = (c / 2) + 1;
+      count = bic_acc(it_n, i, d, part + step);
+      if (rank >= count) {
+        part += step;
+        c -= step;
+      } else {
+        c = step - 1;
+      }
+    }
+    rank -= bic_acc(it_n, i, d, part);
+  }
+
+  rop[0] = it_n;
+}
+
 void gray(uint16_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
           const uintx r) {
   uint16_t it_n = n;
@@ -556,6 +607,8 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
         *unrank = colex_bs;
       } else if (strcmp(optarg, "colexpart") == 0) {
         *unrank = colex_part;
+      } else if (strcmp(optarg, "colexdbcs") == 0) {
+        *unrank = colex_dbcs;
       } else if (strcmp(optarg, "gray") == 0) {
         *unrank = gray;
       } else if (strcmp(optarg, "rbo") == 0) {
