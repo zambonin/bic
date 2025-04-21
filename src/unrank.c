@@ -548,19 +548,20 @@ void inner_rbo(uint16_t *rop, const uint16_t n, const uint16_t k,
   uint16_t right = k - left;
 
   uint16_t leftSum = 0;
-  uintx partSum = 0;
+  uint16_t rightSum = 0;
+  uintx rightPoints = 0;
 
-  uint16_t s = 0;
-  for (uintx count = 0; s <= min(n, left * d) && count <= rank;
-       ++s, count += bic(n - s + 1, left, d) * bic(s - 1, right, d)) {
-    leftSum = s;
-    partSum = count;
+  for (uintx count = 0; leftSum <= min(n, left * d); ++leftSum, rank -= count) {
+    rightSum = n - leftSum;
+    rightPoints = bic(rightSum, right, d);
+    count = bic(leftSum, left, d) * rightPoints;
+    if (rank < count) {
+      break;
+    }
   }
 
-  uint16_t rightSum = n - leftSum;
-  uintx rightPoints = bic(rightSum, right, d);
-  uintx leftRank = (rank - partSum) / rightPoints;
-  uintx rightRank = (rank - partSum) % rightPoints;
+  uintx leftRank = rank / rightPoints;
+  uintx rightRank = rank % rightPoints;
 
   inner_rbo(rop, leftSum, left, d, leftRank, start);
   inner_rbo(rop, rightSum, right, d, rightRank, start + left);
