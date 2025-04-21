@@ -2,10 +2,10 @@
 
 IT="${1:-$(make -pqrR | awk '/^IT/ { print $NF }')}"
 
-SECURITY="256 512"
-BACKENDS="bitint boost-fix boost-arb mpz tom"
-ALGORITHMS="colex colexpart gray"
-CACHE_STRAT="none bin comb"
+SECURITY="128 256"
+BACKENDS="bitint boost-fix boost-arb"
+ALGORITHMS="colex colexpart colexbs colexdbcs gray rbo"
+CACHE_STRAT="bin comb acc"
 
 for LEVEL in $SECURITY ; do
   ALL_DATA_PATH="$TMPDIR/c-cycles-all-m-$LEVEL-it-$IT.dat"
