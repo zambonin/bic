@@ -1,8 +1,9 @@
 CC = clang++
-CFLAGS = -Wall -Wextra -pedantic -O3 -ffast-math -march=native -mtune=native
+CFLAGS = -Wall -Wextra -pedantic -O3 -ffast-math -march=native -mtune=native -Iinclude
 LDFLAGS = -lm
-SRC = src/unrank.c
-OUT = $(basename $(SRC))
+SRC = $(wildcard src/*.c)
+OBJ = $(SRC:.c=.o)
+OUT = src/main
 
 RANGE = $(shell seq 30 80)
 IT = 128
@@ -13,6 +14,8 @@ STRATEGY = gen
 PARAMS = -a $(ALG) -i $(IT) -c $(CACHE) -p $(PRINT) -s $(STRATEGY)
 
 default:
+
+$(OUT): $(OBJ)
 
 bitint: CC = clang
 bitint: CFLAGS += -std=gnu23 -DBITINT
@@ -67,4 +70,4 @@ clean-stats:
 	$(RM) $(wildcard *.stats.png)
 
 clean:
-	$(RM) $(OUT)
+	$(RM) $(OUT) $(OBJ)

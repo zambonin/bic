@@ -11,7 +11,7 @@ library is not available or cannot be used. Nonetheless, there are C++ backends
 available to show the performance differences.
 
 Type `make $BACKEND` to compile the code, where $BACKEND is one of
-{bitint,boost-fix,boost-arb,mpz,tom} and `./src/unrank` to see the available
+{bitint,boost-fix,boost-arb,mpz,tom} and `./src/main` to see the available
 options. Of course, the necessary dependencies must be installed in the system.
 
 Typing `make IT=$N test` unranks $N random integers for several parameter sets.
