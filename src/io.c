@@ -38,7 +38,7 @@ void free_cache() {
 
 int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
                    uint16_t *d, uint32_t *iterations, unrank_func *unrank,
-                   uint16_t *m, strategy_func *strategy) {
+                   rank_func *rank, uint16_t *m, strategy_func *strategy) {
   for (;;) {
     int c = getopt_long(argc, argv, "n:k:d:a:i:c:m:p:s:", long_options, NULL);
     if (c == -1) {
@@ -58,16 +58,22 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
     case 'a':
       if (strcmp(optarg, "colex") == 0) {
         *unrank = colex;
+        *rank = colex_rank;
       } else if (strcmp(optarg, "colexbs") == 0) {
         *unrank = colex_bs;
+        *rank = colex_rank;
       } else if (strcmp(optarg, "colexpart") == 0) {
         *unrank = colex_part;
+        *rank = colex_rank;
       } else if (strcmp(optarg, "colexdbcs") == 0) {
         *unrank = colex_dbcs;
+        *rank = colex_rank;
       } else if (strcmp(optarg, "gray") == 0) {
         *unrank = gray;
+        *rank = gray_rank;
       } else if (strcmp(optarg, "rbo") == 0) {
         *unrank = rbo;
+        *rank = rbo_rank;
       } else
         INVALID_PARAM;
       break;

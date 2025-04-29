@@ -3,8 +3,8 @@
 
 #include <math.h>
 
-#include "common.h"
 #include "cache.h"
+#include "common.h"
 
 extern long double logl(long double);
 

@@ -6,22 +6,22 @@
 
 #include "common.h"
 
-#define PERF(total_time, total_cycles, logic)                                  \
-  struct timespec time_start;                                                  \
-  struct timespec time_stop;                                                   \
+#define PERF(total_time, total_cycles, logic, var)                             \
+  struct timespec var##_tstart;                                                \
+  struct timespec var##_tstop;                                                 \
                                                                                \
-  clock_gettime(CLOCK_MONOTONIC_RAW, &time_start);                             \
-  uint64_t cycle_start = cycles();                                             \
+  clock_gettime(CLOCK_MONOTONIC_RAW, &var##_tstart);                           \
+  uint64_t var##_cstart = cycles();                                            \
                                                                                \
   logic;                                                                       \
                                                                                \
-  uint64_t cycle_stop = cycles();                                              \
-  clock_gettime(CLOCK_MONOTONIC_RAW, &time_stop);                              \
+  uint64_t var##_cstop = cycles();                                             \
+  clock_gettime(CLOCK_MONOTONIC_RAW, &var##_tstop);                            \
                                                                                \
   total_time +=                                                                \
-      (long double)(time_stop.tv_sec - time_start.tv_sec) * NS_TO_SEC +        \
-      (long double)(time_stop.tv_nsec - time_start.tv_nsec);                   \
-  total_cycles += cycle_stop - cycle_start;
+      (long double)(var##_tstop.tv_sec - var##_tstart.tv_sec) * NS_TO_SEC +    \
+      (long double)(var##_tstop.tv_nsec - var##_tstart.tv_nsec);               \
+  total_cycles += var##_cstop - var##_cstart;
 
 // from https://stackoverflow.com/a/40245287
 typedef struct {

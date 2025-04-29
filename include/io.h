@@ -38,8 +38,10 @@
     PRINT_MATRIX_LG(var, n_rows, n_cols);                                      \
   }
 
-#define INVALID_PARAM \
-  if (fprintf(stderr, "Invalid parameter.\n")) { return 1; }
+#define INVALID_PARAM                                                          \
+  if (fprintf(stderr, "Invalid parameter.\n")) {                               \
+    return 1;                                                                  \
+  }
 
 enum {
   PRINT_STATS = 4,
@@ -123,6 +125,6 @@ void free_cache();
 
 int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
                    uint16_t *d, uint32_t *iterations, unrank_func *unrank,
-                   uint16_t *m, strategy_func *strategy);
+                   rank_func *rank, uint16_t *m, strategy_func *strategy);
 
 #endif

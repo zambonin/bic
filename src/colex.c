@@ -101,3 +101,16 @@ void colex_dbcs(uint32_t *rop, const uint16_t n, const uint16_t k,
 
   rop[0] = it_n;
 }
+
+uintx colex_rank(const uint16_t n, const uint16_t k, const uint16_t d,
+                 const uint32_t *comb) {
+  uintx rank = 0;
+  uint16_t it_n = n;
+
+  for (uint16_t i = k - 1; i > 0; it_n -= comb[i], --i) {
+    for (uint16_t j = 0; j < comb[i]; rank += bic(it_n - j, i, d), ++j) {
+    }
+  }
+
+  return rank;
+}

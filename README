@@ -1,5 +1,5 @@
-Efficient implementations of algorithms for combinatorial unranking of bounded
-integer compositions, which are sometimes used in applied cryptography
+Efficient implementations of algorithms for combinatorial (un)ranking of
+bounded integer compositions, which are sometimes used in applied cryptography
 (cf. hash-based signatures and sum-preserving encryption).
 
 The implementations are based on the recent addition of bit-precise integer

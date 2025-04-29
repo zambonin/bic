@@ -19,7 +19,7 @@
   long double total_time = 0;                                                  \
   long double total_cycles = 0;                                                \
                                                                                \
-  PERF(total_time, total_cycles, logic);
+  PERF(total_time, total_cycles, logic, cache);
 
 #define GET_CACHE(var, i, j) *(var + ((i) * var##_cols) + (j))
 

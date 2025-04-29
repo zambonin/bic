@@ -45,6 +45,8 @@ static std::random_device rd;
 
 typedef void (*unrank_func)(uint32_t *, const uint16_t, const uint16_t,
                             const uint16_t, const uintx);
+typedef uintx (*rank_func)(const uint16_t, const uint16_t, const uint16_t,
+                           const uint32_t *);
 typedef void (*strategy_func)(const uint16_t, uint16_t *, const uint16_t,
                               uint16_t *);
 typedef uintx (*math_func)(const uint16_t, const uint16_t, const uint16_t);
