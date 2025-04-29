@@ -15,7 +15,6 @@ void pprint(const uint16_t n, const uint16_t k, const uint16_t d,
            total_cycles / iterations);
   } else if (print_type == PRINT_ACCESS) {
     PRINT_MATRIX_INT(access_pattern, access_pattern_rows, access_pattern_cols);
-    free(access_pattern);
   }
 }
 
@@ -34,6 +33,7 @@ void free_cache() {
     }
     free(acc_cache);
   }
+  free(access_pattern);
 }
 
 int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
