@@ -23,12 +23,13 @@
       (long double)(var##_tstop.tv_nsec - var##_tstart.tv_nsec);               \
   total_cycles += var##_cstop - var##_cstart;
 
-// from https://stackoverflow.com/a/40245287
+// https://stackoverflow.com/a/40245287
 typedef struct {
   const void *key;
   void *last_visited;
 } bsearch_insertion_state;
 
+// https://github.com/sphincs/sphincsplus/blob/7ec789ac/ref/test/cycles.c
 uint64_t cycles(void);
 
 uint32_t min(const uint32_t a, const uint32_t b);

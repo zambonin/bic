@@ -5,8 +5,6 @@
 #include <stdlib.h>
 
 #include "common.h"
-#include "io.h"
-#include "utils.h"
 
 #define BUILD_CACHE(rows, cols, _int, var, type, logic)                        \
   uint32_t n_rows = rows;                                                      \
@@ -49,5 +47,7 @@ extern uint16_t acc_cache_rows;
 extern uint16_t acc_cache_cols;
 
 void build_cache(const uint16_t n, const uint16_t k, const uint16_t d);
+
+void free_cache();
 
 #endif

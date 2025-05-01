@@ -1,4 +1,7 @@
+#include "cache.h"
+#include "colex.h"
 #include "io.h"
+#include "math.h"
 #include "utils.h"
 
 int32_t main(int32_t argc, char **argv) {
@@ -7,12 +10,11 @@ int32_t main(int32_t argc, char **argv) {
   uint16_t d = 0;
   uint16_t m = 0;
   uint32_t iterations = 1;
-  unrank_func unrank = colex;
-  rank_func rank = colex_rank;
+  order ord = colex;
   strategy_func strategy = mingen;
 
-  if (parse_args(argc, argv, &n, &k, &d, &iterations, &unrank, &rank, &m,
-                 &strategy) > 0) {
+  if (parse_args(argc, argv, &n, &k, &d, &iterations, &ord, &m, &strategy) >
+      0) {
     return 1;
   }
 
@@ -33,17 +35,16 @@ int32_t main(int32_t argc, char **argv) {
 
     const uintx r = random_rank(n, k, d);
 
-    PERF(utime, ucycles, (*unrank)(comp, n, k, d, r), unrank);
+    PERF(utime, ucycles, (*ord.unrank)(comp, n, k, d, r), unrank);
 
-    PERF(rtime, rcycles, const uintx rr = (*rank)(n, k, d, comp), rank);
+    PERF(rtime, rcycles, const uintx rr = (*ord.rank)(n, k, d, comp), rank);
 
     assert(r == rr);
 
     check_valid_bounded_composition(comp, n, k, d);
   }
 
-  pprint(n, k, d, iterations, utime, ucycles);
-  pprint(n, k, d, iterations, rtime, rcycles);
+  pprint(n, k, d, iterations, utime, ucycles, rtime, rcycles);
 
   free_cache();
   free(comp);

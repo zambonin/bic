@@ -1,7 +1,9 @@
 #include "gray.h"
+#include "math.h"
+#include "utils.h"
 
-void gray(uint32_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
-          const uintx r) {
+void gray_unrank(uint32_t *rop, const uint16_t n, const uint16_t k,
+                 const uint16_t d, const uintx r) {
   uint16_t it_n = n;
   uintx rank = r;
   uint16_t part = 0;

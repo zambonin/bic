@@ -1,4 +1,7 @@
 #include "cache.h"
+#include "io.h"
+#include "math.h"
+#include "utils.h"
 
 int cache_type = NO_CACHE;
 uintx *bin_cache;
@@ -62,4 +65,22 @@ void build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   if (cache_type >= ACC_COMB_CACHE) {
     build_acc_cache(n, k, d);
   }
+}
+
+void free_cache() {
+  if (cache_type >= BIN_CACHE) {
+    free(bin_cache);
+  }
+  if (cache_type >= COMB_CACHE) {
+    free(comb_cache);
+  }
+  if (cache_type >= ACC_COMB_CACHE) {
+    for (uint16_t i = 0; i < acc_cache_rows; ++i) {
+      for (uint16_t j = 0; j < acc_cache_cols; ++j) {
+        free(GET_CACHE(acc_cache, i, j));
+      }
+    }
+    free(acc_cache);
+  }
+  free(access_pattern);
 }

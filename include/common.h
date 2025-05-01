@@ -7,8 +7,9 @@
 
 enum {
   BIT_LENGTH = 320,
-  NS_TO_SEC = 1000000000,
 };
+
+static const uint32_t NS_TO_SEC = 1000000000;
 
 #if defined(BOOST_FIX_INT)
 #include <boost/multiprecision/cpp_int.hpp>
@@ -43,12 +44,16 @@ typedef _BitInt(BIT_LENGTH) intx;
 static std::random_device rd;
 #endif
 
-typedef void (*unrank_func)(uint32_t *, const uint16_t, const uint16_t,
-                            const uint16_t, const uintx);
-typedef uintx (*rank_func)(const uint16_t, const uint16_t, const uint16_t,
-                           const uint32_t *);
+typedef struct {
+  void (*unrank)(uint32_t *, const uint16_t, const uint16_t, const uint16_t,
+                 const uintx);
+  uintx (*rank)(const uint16_t, const uint16_t, const uint16_t,
+                const uint32_t *);
+} order;
+
 typedef void (*strategy_func)(const uint16_t, uint16_t *, const uint16_t,
                               uint16_t *);
+
 typedef uintx (*math_func)(const uint16_t, const uint16_t, const uint16_t);
 
 #endif

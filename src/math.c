@@ -1,15 +1,18 @@
 #include "math.h"
+#include "cache.h"
+#include "io.h"
+#include "utils.h"
 
 #if defined(BITINT)
-long double logl2(const uintx u) { return logl(u) / log(2); }
+long double lg(const uintx u) { return logl(u) / logl(2); }
 #else
-long double logl2(const uintx u) {
+long double lg(const uintx u) {
   return (long double)log2(boost::multiprecision::cpp_bin_float_100(u));
 }
 #endif
 
 long double lg_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
-  return logl2(inner_bic_with_sums(n, k, d, NULL, bin_uiui));
+  return lg(inner_bic_with_sums(n, k, d, NULL, inner_bin));
 }
 
 void mingen(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
@@ -49,29 +52,35 @@ void minver(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
 }
 
 // from FXT: aux0/binomial.h
-uintx bin_uiui(const uint16_t n, const uint16_t k, const uint16_t d) {
+uintx inner_bin(const uint16_t n, const uint16_t k, const uint16_t d) {
   (void)d;
-  if (k > n)
+  if (k > n) {
     return 0;
-  if ((k == 0) || (k == n))
+  }
+
+  if ((k == 0) || (k == n)) {
     return 1;
+  }
 
   uint16_t kk = k;
-  if (2 * k > n)
+  if (2 * k > n) {
     kk = n - k;
+  }
 
   uintx b = n - kk + 1;
   uintx f = b;
+
   for (uintx j = 2; j <= kk; ++j) {
     ++f;
     b *= f;
     b /= j;
   }
+
   return b;
 }
 
 uintx bin(const uint16_t n, const uint16_t k, const uint16_t d) {
-  GET_CACHE_OR_CALC(BIN_CACHE, bin_cache, bin_uiui);
+  GET_CACHE_OR_CALC(BIN_CACHE, bin_cache, inner_bin);
 }
 
 uintx inner_bic_with_sums(const uint16_t n, const uint16_t k, const uint16_t d,

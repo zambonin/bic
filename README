@@ -18,7 +18,7 @@ Typing `make IT=$N test` unranks $N random integers for several parameter sets.
 Other variables that control the behavior of the program can also be passed to
 the Makefile to experiment with specific parameters. For instance, the command
 
-  `make clean boost-fix ALG=colexpart IT=1024 CACHE=bin test-256`
+  `make clean boost-fix ORDER=colex ALG=ps IT=1024 CACHE=bin test-256`
 
 will run tests for the unranking algorithm to the co-lexicographic order which
 reuses partial sums, using a wide Boost fixed-integer type for the arithmetic,

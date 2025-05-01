@@ -7,11 +7,12 @@ OUT = src/main
 
 RANGE = $(shell seq 30 80)
 IT = 128
-ALG = colex
+ORDER = colex
+ALG = default
 CACHE = none
 PRINT = none
 STRATEGY = gen
-PARAMS = -a $(ALG) -i $(IT) -c $(CACHE) -p $(PRINT) -s $(STRATEGY)
+PARAMS = -o $(ORDER) -a $(ALG) -i $(IT) -c $(CACHE) -p $(PRINT) -s $(STRATEGY)
 
 default:
 
@@ -21,17 +22,17 @@ bitint: CC = clang
 bitint: CFLAGS += -std=gnu23 -DBITINT
 bitint: $(OUT)
 
-boost-fix: CFLAGS += -x c++ -DBOOST_FIX_INT
+boost-fix: CFLAGS += -x c++ -DBOOST_FIX_INT -std=c++20
 boost-fix: $(OUT)
 
-boost-arb: CFLAGS += -x c++ -DBOOST_ARB_INT
+boost-arb: CFLAGS += -x c++ -DBOOST_ARB_INT -std=c++20
 boost-arb: $(OUT)
 
-mpz: CFLAGS += -x c++ -DBOOST_MPZ_INT
+mpz: CFLAGS += -x c++ -DBOOST_MPZ_INT -std=c++20
 mpz: LDFLAGS += -lgmp
 mpz: $(OUT)
 
-tom: CFLAGS += -x c++ -DBOOST_TOM_INT
+tom: CFLAGS += -x c++ -DBOOST_TOM_INT -std=c++20
 tom: LDFLAGS += -ltommath
 tom: $(OUT)
 

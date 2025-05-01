@@ -1,7 +1,9 @@
 #include "rbo.h"
+#include "math.h"
+#include "utils.h"
 
-void inner_rbo(uint32_t *rop, const uint16_t n, const uint16_t k,
-               const uint16_t d, const uintx r, const uint16_t start) {
+void inner_rbo_unrank(uint32_t *rop, const uint16_t n, const uint16_t k,
+                      const uint16_t d, const uintx r, const uint16_t start) {
   uintx rank = r;
 
   if (k == 1) {
@@ -28,13 +30,13 @@ void inner_rbo(uint32_t *rop, const uint16_t n, const uint16_t k,
   uintx leftRank = rank / rightPoints;
   uintx rightRank = rank % rightPoints;
 
-  inner_rbo(rop, leftSum, left, d, leftRank, start);
-  inner_rbo(rop, rightSum, right, d, rightRank, start + left);
+  inner_rbo_unrank(rop, leftSum, left, d, leftRank, start);
+  inner_rbo_unrank(rop, rightSum, right, d, rightRank, start + left);
 }
 
-void rbo(uint32_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
-         const uintx r) {
-  inner_rbo(rop, n, k, d, r, 0);
+void rbo_unrank(uint32_t *rop, const uint16_t n, const uint16_t k,
+                const uint16_t d, const uintx r) {
+  inner_rbo_unrank(rop, n, k, d, r, 0);
 }
 
 uintx rbo_rank(const uint16_t n, const uint16_t k, const uint16_t d,

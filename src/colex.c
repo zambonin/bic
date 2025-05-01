@@ -1,48 +1,26 @@
 #include "colex.h"
+#include "common.h"
+#include "math.h"
+#include "utils.h"
 
-void colex(uint32_t *rop, const uint16_t n, const uint16_t k, const uint16_t d,
-           const uintx r) {
+void colex_unrank(uint32_t *rop, const uint16_t n, const uint16_t k,
+                  const uint16_t d, const uintx r) {
   uint16_t it_n = n;
   uintx rank = r;
   uint16_t part = 0;
   uintx count = 0;
 
-  if (cache_type == ACC_COMB_CACHE) {
-    for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
-      uintx *sums = acc(it_n, i, d);
-      for (part = 0; count = sums[part + 1], rank >= count; ++part) {
-      }
-      rank -= sums[part];
-    }
-  } else {
-    for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
-      for (part = 0; count = bic(it_n - part, i, d), rank >= count;
-           ++part, rank -= count) {
-      }
-    }
-  }
-
-  rop[0] = it_n;
-}
-
-void colex_bs(uint32_t *rop, const uint16_t n, const uint16_t k,
-              const uint16_t d, const uintx r) {
-  uint16_t it_n = n;
-  uintx rank = r;
-  uint16_t part = 0;
-
   for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
-    uintx *sums = acc(it_n, i, d);
-    size_t length = (size_t)sums[d + 2];
-    part = bsearch_insertion(&rank, sums, length, sizeof(uintx));
-    rank -= sums[part];
+    for (part = 0; count = bic(it_n - part, i, d), rank >= count;
+         ++part, rank -= count) {
+    }
   }
 
   rop[0] = it_n;
 }
 
-void colex_part(uint32_t *rop, const uint16_t n, const uint16_t k,
-                const uint16_t d, const uintx r) {
+void colex_unrank_part_sums(uint32_t *rop, const uint16_t n, const uint16_t k,
+                            const uint16_t d, const uintx r) {
   uint16_t it_n = n;
   uintx rank = r;
   uint16_t part = 0;
@@ -77,8 +55,41 @@ void colex_part(uint32_t *rop, const uint16_t n, const uint16_t k,
   free(prev_sum);
 }
 
-void colex_dbcs(uint32_t *rop, const uint16_t n, const uint16_t k,
-                const uint16_t d, const uintx r) {
+void colex_unrank_acc_linear(uint32_t *rop, const uint16_t n, const uint16_t k,
+                             const uint16_t d, const uintx r) {
+  uint16_t it_n = n;
+  uintx rank = r;
+  uint16_t part = 0;
+  uintx count = 0;
+
+  for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
+    uintx *sums = acc(it_n, i, d);
+    for (part = 0; count = sums[part + 1], rank >= count; ++part) {
+    }
+    rank -= sums[part];
+  }
+
+  rop[0] = it_n;
+}
+
+void colex_unrank_acc_bisect(uint32_t *rop, const uint16_t n, const uint16_t k,
+                             const uint16_t d, const uintx r) {
+  uint16_t it_n = n;
+  uintx rank = r;
+  uint16_t part = 0;
+
+  for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
+    uintx *sums = acc(it_n, i, d);
+    size_t length = (size_t)sums[d + 2];
+    part = bsearch_insertion(&rank, sums, length, sizeof(uintx));
+    rank -= sums[part];
+  }
+
+  rop[0] = it_n;
+}
+
+void colex_unrank_acc_direct(uint32_t *rop, const uint16_t n, const uint16_t k,
+                             const uint16_t d, const uintx r) {
   uint16_t it_n = n;
   uintx rank = r;
   uint16_t part = 0;
