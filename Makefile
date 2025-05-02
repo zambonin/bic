@@ -58,10 +58,11 @@ leak-256: $(foreach K,$(RANGE),256-$(K).leak)
 leak: leak-128 leak-192 leak-256
 
 %.stats.png: $(OUT) /usr/bin/gnuplot
-	./$< -m $(subst -, -k ,$*) $(PARAMS) \
-		| gnuplot -e "set terminal png size 2560, 1440; \
-			plot '/dev/stdin' matrix with image notitle" > $@
-
+	./$< -m $(subst -, -k ,$*) \
+		| ( IFS=" ," read _ _ N _ _ K _ _ D _; \
+			./$< -m $(subst -, -k ,$*) $(PARAMS) \
+				| gnuplot -c plot-cache-access.gp $$N $$K $$D ) \
+		> $@
 stats-128: $(foreach K,$(RANGE),128-$(K).stats.png)
 stats-192: $(foreach K,$(RANGE),192-$(K).stats.png)
 stats-256: $(foreach K,$(RANGE),256-$(K).stats.png)
