@@ -117,6 +117,15 @@ uintx inner_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
 }
 
 uintx bic(const uint16_t n, const uint16_t k, const uint16_t d) {
+  if (cache_type == SMALL_COMB_CACHE) {
+    uintx* row = small_comb_cache[k - 1];
+    if (n < row[0] || n > row[1]) {
+      return inner_bic(n, k, d);
+    }
+
+    return row[n - (uint16_t)row[0] + 2];
+  }
+
   GET_CACHE_OR_CALC(COMB_CACHE, comb_cache, inner_bic);
 }
 
@@ -124,6 +133,7 @@ uintx *inner_acc(const uint16_t n, const uint16_t k, const uint16_t d) {
   size_t length = d + 3;
   size_t i = 0;
   uintx *rop = (uintx *)calloc(length, sizeof(uintx));
+  acc_cache_size += length * sizeof(uintx);
   uintx sum = 0;
 
   rop[0] = 0;

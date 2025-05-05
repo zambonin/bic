@@ -5,6 +5,8 @@
 
 extern long double logl(long double);
 
+extern double sqrt(double);
+
 long double lg(const uintx u);
 
 long double lg_bic(const uint16_t n, const uint16_t k, const uint16_t d);

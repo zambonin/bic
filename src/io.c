@@ -82,6 +82,8 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
         cache_type = COMB_CACHE;
       } else if (strcmp(optarg, "acc") == 0) {
         cache_type = ACC_COMB_CACHE;
+      } else if (strcmp(optarg, "scomb") == 0) {
+        cache_type = SMALL_COMB_CACHE;
       } else
         INVALID_PARAM;
       break;

@@ -13,6 +13,7 @@
                                                                                \
   var = (_int *)calloc(n_rows * n_cols, sizeof(_int));                         \
   assert(var != NULL);                                                         \
+  var##_size = n_rows * n_cols * sizeof(_int);                                 \
                                                                                \
   long double total_time = 0;                                                  \
   long double total_cycles = 0;                                                \
@@ -34,7 +35,8 @@ enum {
   NO_CACHE = 0,
   BIN_CACHE = 1,
   COMB_CACHE = 2,
-  ACC_COMB_CACHE = 3,
+  SMALL_COMB_CACHE = 3,
+  ACC_COMB_CACHE = 4,
 };
 
 extern int cache_type;
@@ -45,6 +47,13 @@ extern uint16_t comb_cache_cols;
 extern uintx **acc_cache;
 extern uint16_t acc_cache_rows;
 extern uint16_t acc_cache_cols;
+extern uintx **small_comb_cache;
+extern uint16_t small_comb_cache_cols;
+
+extern uint64_t bin_cache_size;
+extern uint64_t comb_cache_size;
+extern uint64_t acc_cache_size;
+extern uint64_t small_comb_cache_size;
 
 void build_cache(const uint16_t n, const uint16_t k, const uint16_t d);
 
