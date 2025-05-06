@@ -20,7 +20,7 @@ int32_t main(int32_t argc, char **argv) {
 
   srandom(time(NULL));
 
-  build_cache(n, k, d);
+  build_caches(n, k, d);
 
   long double utime = 0;
   long double ucycles = 0;
@@ -46,7 +46,9 @@ int32_t main(int32_t argc, char **argv) {
 
   pprint(n, k, d, iterations, utime, ucycles, rtime, rcycles);
 
-  free_cache();
+  free_caches();
+
+  free(access_pattern_cache_t.data);
   free(comp);
 
   return 0;

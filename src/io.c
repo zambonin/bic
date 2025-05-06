@@ -6,9 +6,6 @@
 #include "rbo.h"
 
 int print_type = PRINT_STATS;
-uint32_t *access_pattern;
-uint32_t access_pattern_rows = 0;
-uint32_t access_pattern_cols = 0;
 
 void pprint(const uint16_t n, const uint16_t k, const uint16_t d,
             const uint32_t it, const long double utime,
@@ -20,8 +17,13 @@ void pprint(const uint16_t n, const uint16_t k, const uint16_t d,
            "rank avg = %14.2Lf ns, %14.2Lf cyc.\n",
            n, k, d, it, lg_bic(n, k, d), utime / it, ucycles / it, rtime / it,
            rcycles / it);
-  } else if (print_type == PRINT_ACCESS) {
-    PRINT_MATRIX_INT(access_pattern, access_pattern_rows, access_pattern_cols);
+  } else if (print_type == PRINT_ACCESS && cache_type <= COMB_CACHE) {
+    for (uint32_t row = 0; row < access_pattern_cache_t.rows; ++row) {
+      for (uint32_t col = 0; col < access_pattern_cache_t.cols; ++col) {
+        printf("%8d", GET_CACHE_ACCESS(row, col));
+      }
+      printf("\n");
+    }
   }
 }
 
@@ -95,8 +97,6 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
         print_type = PRINT_STATS;
       } else if (strcmp(optarg, "access") == 0) {
         print_type = PRINT_ACCESS;
-      } else if (strcmp(optarg, "length") == 0) {
-        print_type = PRINT_LENGTH;
       } else if (strcmp(optarg, "build") == 0) {
         print_type = PRINT_BUILD;
       } else

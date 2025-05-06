@@ -80,7 +80,7 @@ uintx inner_bin(const uint16_t n, const uint16_t k, const uint16_t d) {
 }
 
 uintx bin(const uint16_t n, const uint16_t k, const uint16_t d) {
-  GET_CACHE_OR_CALC(BIN_CACHE, bin_cache, inner_bin);
+  GET_CACHE_OR_CALC(BIN_CACHE, GET_CACHE_BIN(n, k), inner_bin);
 }
 
 uintx inner_bic_with_sums(const uint16_t n, const uint16_t k, const uint16_t d,
@@ -118,22 +118,24 @@ uintx inner_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
 
 uintx bic(const uint16_t n, const uint16_t k, const uint16_t d) {
   if (cache_type == SMALL_COMB_CACHE) {
-    uintx* row = small_comb_cache[k - 1];
-    if (n < row[0] || n > row[1]) {
+    uintx *row = GET_CACHE_SCOMB(0, k - 1);
+    uint16_t left = (uint16_t)row[0];
+    uint16_t right = (uint16_t)row[1];
+
+    if (n < left || n > right) {
       return inner_bic(n, k, d);
     }
-
-    return row[n - (uint16_t)row[0] + 2];
+    return row[n - left + 2];
   }
 
-  GET_CACHE_OR_CALC(COMB_CACHE, comb_cache, inner_bic);
+  GET_CACHE_OR_CALC(COMB_CACHE, GET_CACHE_COMB(n, k), inner_bic);
 }
 
 uintx *inner_acc(const uint16_t n, const uint16_t k, const uint16_t d) {
   size_t length = d + 3;
   size_t i = 0;
   uintx *rop = (uintx *)calloc(length, sizeof(uintx));
-  acc_cache_size += length * sizeof(uintx);
+  acc_cache_t.total_size += length * sizeof(uintx);
   uintx sum = 0;
 
   rop[0] = 0;
@@ -147,7 +149,7 @@ uintx *inner_acc(const uint16_t n, const uint16_t k, const uint16_t d) {
 }
 
 uintx *acc(const uint16_t n, const uint16_t k, const uint16_t d) {
-  GET_CACHE_OR_CALC(ACC_COMB_CACHE, acc_cache, inner_acc);
+  GET_CACHE_OR_CALC(ACC_COMB_CACHE, GET_CACHE_ACC(n, k), inner_acc);
 }
 
 uintx bic_acc(const uint16_t n, const uint16_t k, const uint16_t d,

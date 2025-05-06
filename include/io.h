@@ -7,45 +7,15 @@
 
 #include "common.h"
 
-#define PRINT_MATRIX_GENERIC(expr, n_rows, n_cols)                             \
-  for (uint32_t row = 0; row < n_rows; ++row) {                                \
-    for (uint32_t col = 0; col < n_cols; ++col) {                              \
-      expr;                                                                    \
-    }                                                                          \
-    printf("\n");                                                              \
-  }
-
-#define PRINT_MATRIX_LG(var, n_rows, n_cols)                                   \
-  PRINT_MATRIX_GENERIC(printf("%8.2Lf ", lg(GET_CACHE(var, row, col))),        \
-                       n_rows, n_cols)
-
-#define PRINT_MATRIX_INT(var, n_rows, n_cols)                                  \
-  PRINT_MATRIX_GENERIC(printf("%8d ", GET_CACHE(var, row, col)), n_rows, n_cols)
-
-#define PRINT_CACHE_STATS(var, type, desc)                                     \
-  if (cache_type == type && print_type == PRINT_ACCESS) {                      \
-    access_pattern = (uint32_t *)calloc(n_rows * n_cols, sizeof(uint32_t));    \
-    assert(access_pattern != NULL);                                            \
-    access_pattern_rows = n_rows;                                              \
-    access_pattern_cols = n_cols;                                              \
-  } else if (print_type == PRINT_BUILD) {                                      \
-    printf("n = %5d, k = %5d, d = %5d, c = %6s, "                              \
-           "avg time = %14.2Lf ns, avg cycles = %14.2Lf\n",                    \
-           n, k, d, desc, total_time, total_cycles);                           \
-  } else if (cache_type == type && print_type == PRINT_LENGTH) {               \
-    PRINT_MATRIX_LG(var, n_rows, n_cols);                                      \
-  }
-
 #define INVALID_PARAM                                                          \
   if (fprintf(stderr, "Invalid parameter.\n")) {                               \
     return 1;                                                                  \
   }
 
 enum {
-  PRINT_STATS = 4,
-  PRINT_ACCESS = 5,
-  PRINT_LENGTH = 6,
-  PRINT_BUILD = 7,
+  PRINT_STATS = 6,
+  PRINT_ACCESS = 7,
+  PRINT_BUILD = 8,
 };
 
 static const struct option long_options[] = {

@@ -2,11 +2,11 @@
 
 IT="${1:-$(make -pqrR | awk '/^IT/ { print $NF }')}"
 
-SECURITY="128 256"
-BACKENDS="bitint"
+SECURITY="128 192 256"
+BACKENDS="bitint boost-fix"
 ORDERS="colex gray rbo"
 ALGORITHMS="default ps al ab ad"
-CACHE_STRAT="bin comb acc"
+CACHE_STRAT="bin comb scomb acc"
 
 for LEVEL in $SECURITY ; do
   RANK_DATA_PATH="$TMPDIR/c-cycles-rank-all-m-$LEVEL-it-$IT.dat"

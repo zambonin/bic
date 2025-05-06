@@ -3,45 +3,86 @@
 #include "math.h"
 #include "utils.h"
 
-int cache_type = NO_CACHE;
-uintx *bin_cache;
-uint16_t bin_cache_cols = 0;
-uint64_t bin_cache_size = 0;
-uintx *comb_cache;
-uint16_t comb_cache_cols = 0;
-uint64_t comb_cache_size = 0;
-uintx **acc_cache;
-uint16_t acc_cache_rows = 0;
-uint16_t acc_cache_cols = 0;
-uint64_t acc_cache_size = 0;
-uintx **small_comb_cache;
-uint16_t small_comb_cache_cols = 0;
-uint64_t small_comb_cache_size = 0;
+cache_t bin_cache_t;
+cache_t comb_cache_t;
+cache_t acc_cache_t;
+cache_t scomb_cache_t;
+cache_t access_pattern_cache_t;
 
-void build_bin_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
+int cache_type = NO_CACHE;
+
+void *cache_get_element(const cache_t *cache, const uint32_t row,
+                        const uint32_t col) {
+  uint32_t index = row * cache->cols + col;
+  size_t offset = index * cache->elem_size;
+  return (char *)cache->data + offset;
+}
+
+void generic_setup_cache(cache_t *cache, const uint32_t rows,
+                         const uint32_t cols, const size_t elem_size,
+                         char *name, uint8_t type) {
+  cache->rows = rows;
+  cache->cols = cols;
+  cache->elem_size = elem_size;
+  cache->total_size = cache->rows * cache->cols * cache->elem_size;
+  cache->name = name;
+  cache->type = type;
+
+  cache->data = calloc(cache->rows * cache->cols, cache->elem_size);
+  assert(cache->data != NULL);
+}
+
+void print_cache_data(cache_t *cache, long double total_time,
+                      long double total_cycles) {
+  if (cache_type == cache->type && print_type == PRINT_ACCESS) {
+    generic_setup_cache(&access_pattern_cache_t, cache->rows, cache->cols,
+                        sizeof(uint32_t), (char *)"access", 0);
+  } else if (print_type == PRINT_BUILD) {
+    printf(
+        "c = %6s, size = %12zu, avg time = %14.2Lf ns, avg cycles = %14.2Lf\n",
+        cache->name, cache->total_size, total_time, total_cycles);
+  }
+}
+
+void bin_build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   (void)d;
-  BUILD_CACHE(n + k + 1, k, uintx, bin_cache, BIN_CACHE, {
-    GET_CACHE(bin_cache, 0, 0) = 1;
-    for (uint32_t row = 1; row < n_rows; ++row) {
-      GET_CACHE(bin_cache, row, 0) = 1;
-      for (uint16_t col = 1; col <= min(row, n_cols - 1); ++col) {
-        GET_CACHE(bin_cache, row, col) =
-            (uintx)GET_CACHE(bin_cache, row - 1, col - 1) +
-            (uintx)GET_CACHE(bin_cache, row - 1, col);
+  generic_setup_cache(&bin_cache_t, n + k + 1, k, sizeof(uintx), (char *)"bin", BIN_CACHE);
+
+  PERF_CACHE(bin_cache_t, {
+    GET_CACHE_BIN(0, 0) = 1;
+    for (uint32_t row = 1; row < bin_cache_t.rows; ++row) {
+      GET_CACHE_BIN(row, 0) = 1;
+      for (uint16_t col = 1; col <= min(row, bin_cache_t.cols - 1); ++col) {
+        GET_CACHE_BIN(row, col) = (uintx)GET_CACHE_BIN(row - 1, col - 1) +
+                                  (uintx)GET_CACHE_BIN(row - 1, col);
       }
     }
   });
-
-  PRINT_CACHE_STATS(bin_cache, BIN_CACHE, "bin");
 }
 
-void build_small_comb_cache(const uint16_t n, const uint16_t k,
-                            const uint16_t d) {
-  BUILD_CACHE(1, k - 1, uintx*, small_comb_cache, SMALL_COMB_CACHE, {
+void comb_build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
+  generic_setup_cache(&comb_cache_t, n + 1, k + 1, sizeof(uintx),
+                      (char *)"comb", COMB_CACHE);
+
+  PERF_CACHE(comb_cache_t, {
+    GET_CACHE_COMB(0, 0) = 1;
+    for (uint16_t row = 0; row < comb_cache_t.rows; ++row) {
+      for (uint16_t col = 1; col < comb_cache_t.cols; ++col) {
+        GET_CACHE_COMB(row, col) = inner_bic(row, col, d);
+      }
+    }
+  });
+}
+
+void scomb_build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
+  generic_setup_cache(&scomb_cache_t, 1, k - 1, sizeof(uintx *),
+                      (char *)"scomb", SMALL_COMB_CACHE);
+
+  PERF_CACHE(scomb_cache_t, {
     double variance = d * (d + 2) / 12;
     uint8_t level = 4;
 
-    for (uint16_t col = 0; col < n_cols; ++col) {
+    for (uint16_t col = 0; col < scomb_cache_t.cols; ++col) {
       uint16_t j = col + 1;
       double mean = j * n / k;
       double stddev = sqrt(j * variance * (k - j) / k);
@@ -49,8 +90,7 @@ void build_small_comb_cache(const uint16_t n, const uint16_t k,
       uint16_t right = min(mean + level * stddev, n);
 
       uint16_t length = 2 + (right - left + 1);
-      uintx* part = (uintx *)calloc(length, sizeof(uintx));
-      small_comb_cache[col] = part;
+      uintx *part = (uintx *)calloc(length, sizeof(uintx));
 
       part[0] = left;
       part[1] = right;
@@ -58,78 +98,52 @@ void build_small_comb_cache(const uint16_t n, const uint16_t k,
         part[i] = inner_bic(left + i - 2, j, d);
       }
 
-      small_comb_cache_size += length * sizeof(uintx);
+      GET_CACHE_SCOMB(0, col) = part;
+      scomb_cache_t.total_size += length * sizeof(uintx);
     }
   });
-
-  (void)total_time;
-  (void)total_cycles;
 }
 
-void build_comb_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
-  BUILD_CACHE(n + 1, k + 1, uintx, comb_cache, COMB_CACHE, {
-    GET_CACHE(comb_cache, 0, 0) = 1;
-    for (uint16_t row = 0; row < n_rows; ++row) {
-      for (uint16_t col = 1; col < n_cols; ++col) {
-        GET_CACHE(comb_cache, row, col) = inner_bic(row, col, d);
+void acc_build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
+  generic_setup_cache(&acc_cache_t, n + 1, k, sizeof(uintx *), (char *)"acc", ACC_COMB_CACHE);
+
+  PERF_CACHE(acc_cache_t, {
+    for (uint16_t row = 0; row < acc_cache_t.rows; ++row) {
+      for (uint16_t col = 0; col < acc_cache_t.cols; ++col) {
+        GET_CACHE_ACC(row, col) = inner_acc(row, col, d);
       }
     }
   });
-
-  PRINT_CACHE_STATS(comb_cache, COMB_CACHE, "comb");
 }
 
-void build_acc_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
-  BUILD_CACHE(n + 1, k, uintx *, acc_cache, ACC_COMB_CACHE, {
-    for (uint16_t row = 0; row < n_rows; ++row) {
-      for (uint16_t col = 0; col < n_cols; ++col) {
-        uintx* part = inner_acc(row, col, d);
-        GET_CACHE(acc_cache, row, col) = part;
-        free(part);
-      }
-    }
-  });
-
-  (void)total_time;
-  (void)total_cycles;
-}
-
-void build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
-  if (cache_type >= BIN_CACHE) {
-    build_bin_cache(n, k, d);
-  }
-  if (cache_type >= COMB_CACHE) {
-    build_comb_cache(n, k, d);
-  }
-  if (cache_type >= SMALL_COMB_CACHE) {
-    build_small_comb_cache(n, k, d);
-  }
-  if (cache_type >= ACC_COMB_CACHE) {
-    build_acc_cache(n, k, d);
+void build_caches(const uint16_t n, const uint16_t k, const uint16_t d) {
+  for (uint8_t i = 1; i <= cache_type; ++i) {
+    cache_builders[i](n, k, d);
   }
 }
 
-void free_cache() {
-  if (cache_type >= BIN_CACHE) {
-    free(bin_cache);
+void bin_free_cache() { free(bin_cache_t.data); }
+
+void comb_free_cache() { free(comb_cache_t.data); }
+
+void scomb_free_cache() {
+  for (uint16_t j = 0; j < scomb_cache_t.cols; ++j) {
+    free(GET_CACHE_SCOMB(0, j));
   }
-  if (cache_type >= COMB_CACHE) {
-    free(comb_cache);
-  }
-  if (cache_type >= SMALL_COMB_CACHE) {
-    for (uint16_t i = 0; i < small_comb_cache_cols; ++i) {
-      uintx* part = small_comb_cache[i];
-      free(part);
+  free(scomb_cache_t.data);
+}
+
+void acc_free_cache() {
+  for (uint16_t i = 0; i < acc_cache_t.rows; ++i) {
+    for (uint16_t j = 0; j < acc_cache_t.cols; ++j) {
+      free(GET_CACHE_ACC(i, j));
     }
-    free(small_comb_cache);
   }
-  if (cache_type >= ACC_COMB_CACHE) {
-    for (uint16_t i = 0; i < acc_cache_rows; ++i) {
-      for (uint16_t j = 0; j < acc_cache_cols; ++j) {
-        free(GET_CACHE(acc_cache, i, j));
-      }
-    }
-    free(acc_cache);
+  free(acc_cache_t.data);
+}
+
+void free_caches() {
+  for (uint8_t i = 1; i <= cache_type; ++i) {
+    cache_demolishers[i]();
   }
-  free(access_pattern);
 }
