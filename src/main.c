@@ -48,7 +48,6 @@ int32_t main(int32_t argc, char **argv) {
 
   free_caches();
 
-  free(access_pattern_cache_t.data);
   free(comp);
 
   return 0;

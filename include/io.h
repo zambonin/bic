@@ -12,17 +12,6 @@
     return 1;                                                                  \
   }
 
-enum {
-  PRINT_STATS = 6,
-  PRINT_ACCESS = 7,
-  PRINT_BUILD = 8,
-};
-
-extern int print_type;
-extern uint32_t *access_pattern;
-extern uint32_t access_pattern_rows;
-extern uint32_t access_pattern_cols;
-
 void pprint(const uint16_t n, const uint16_t k, const uint16_t d,
             const uint32_t it, const long double utime,
             const long double ucycles, const long double rtime,

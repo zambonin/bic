@@ -10,9 +10,8 @@ IT = 128
 ORDER = colex
 ALG = default
 CACHE = none
-PRINT = none
 STRATEGY = gen
-PARAMS = -o $(ORDER) -a $(ALG) -i $(IT) -c $(CACHE) -p $(PRINT) -s $(STRATEGY)
+PARAMS = -o $(ORDER) -a $(ALG) -i $(IT) -c $(CACHE) -s $(STRATEGY)
 
 default:
 
@@ -56,20 +55,6 @@ leak-128: $(foreach K,$(RANGE),128-$(K).leak)
 leak-192: $(foreach K,$(RANGE),192-$(K).leak)
 leak-256: $(foreach K,$(RANGE),256-$(K).leak)
 leak: leak-128 leak-192 leak-256
-
-%.stats.png: $(OUT) /usr/bin/gnuplot
-	./$< -m $(subst -, -k ,$*) \
-		| ( IFS=" ," read _ _ N _ _ K _ _ D _; \
-			./$< -m $(subst -, -k ,$*) $(PARAMS) \
-				| gnuplot -c plot-cache-access.gp $$N $$K $$D ) \
-		> $@
-stats-128: $(foreach K,$(RANGE),128-$(K).stats.png)
-stats-192: $(foreach K,$(RANGE),192-$(K).stats.png)
-stats-256: $(foreach K,$(RANGE),256-$(K).stats.png)
-stats: stats-128 stats-192 stats-256
-
-clean-stats:
-	$(RM) $(wildcard *.stats.png)
 
 clean:
 	$(RM) $(OUT) $(OBJ)

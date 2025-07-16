@@ -39,6 +39,8 @@ int32_t max(const int32_t a, const int32_t b);
 void check_valid_bounded_composition(const uint32_t *c, const uint16_t n,
                                      const uint16_t k, const uint16_t d);
 
+int cmp(const void *c, const void *d);
+
 size_t bsearch_insertion(const void *key, const void *base, size_t nel,
                          size_t width);
 

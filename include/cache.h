@@ -18,25 +18,11 @@
 #define GET_CACHE_ACC(row, col)                                                \
   (*(uintx **)cache_get_element(&acc_cache_t, row, col))
 
-#define GET_CACHE_ACCESS(row, col)                                             \
-  (*(uint32_t *)cache_get_element(&access_pattern_cache_t, row, col))
-
 #define GET_CACHE_OR_CALC(type, logic, math)                                   \
   if (cache_type >= type) {                                                    \
-    if (cache_type == type && print_type == PRINT_ACCESS) {                    \
-      (GET_CACHE_ACCESS(n, k))++;                                              \
-    }                                                                          \
     return logic;                                                              \
   }                                                                            \
   return math(n, k, d);
-
-#define PERF_CACHE(cache, logic)                                               \
-  long double total_time = 0;                                                  \
-  long double total_cycles = 0;                                                \
-                                                                               \
-  PERF(total_time, total_cycles, logic, cache)                                 \
-                                                                               \
-  print_cache_data(&cache, total_time, total_cycles);
 
 enum {
   NO_CACHE = 0,
@@ -63,7 +49,10 @@ extern cache_t bin_cache_t;
 extern cache_t comb_cache_t;
 extern cache_t scomb_cache_t;
 extern cache_t acc_cache_t;
-extern cache_t access_pattern_cache_t;
+
+void generic_setup_cache(cache_t *cache, const uint32_t rows,
+                         const uint32_t cols, const size_t elem_size,
+                         char *name, uint8_t type);
 
 void *cache_get_element(const cache_t *cache, const uint32_t row,
                         const uint32_t col);
