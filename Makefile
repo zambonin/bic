@@ -5,6 +5,9 @@ SRC = $(wildcard src/*.c)
 OBJ = $(SRC:.c=.o)
 OUT = src/main
 
+VALGRIND_PATH ?= /usr/bin/valgrind
+PLOT_CACHE_ACCESS_SCRIPT = plot-from-dhat.py
+
 RANGE = $(shell seq 30 80)
 IT = 128
 ORDER = colex
@@ -46,8 +49,8 @@ test: test-128 test-192 test-256
 %.leak: CC = gcc
 %.leak: CFLAGS += -std=gnu23 -DBITINT -mno-avx512f
 %.leak: IT = 1
-%.leak: $(OUT) /usr/bin/valgrind
-	valgrind --quiet --exit-on-first-error=yes --leak-check=full \
+%.leak: $(OUT) $(VALGRIND_PATH)
+	$(VALGRIND_PATH) --quiet --exit-on-first-error=yes --leak-check=full \
 		--errors-for-leak-kinds=all --show-leak-kinds=all --error-exitcode=1 \
 		./$< -m $(subst -, -k ,$*) $(PARAMS) 2>/dev/null
 
@@ -55,6 +58,21 @@ leak-128: $(foreach K,$(RANGE),128-$(K).leak)
 leak-192: $(foreach K,$(RANGE),192-$(K).leak)
 leak-256: $(foreach K,$(RANGE),256-$(K).leak)
 leak: leak-128 leak-192 leak-256
+
+%.stats.png: CC = gcc
+%.stats.png: CFLAGS += -std=gnu23 -DBITINT -mno-avx512f -DDHAT
+%.stats.png: $(OUT) $(VALGRIND_PATH) $(PLOT_CACHE_ACCESS_SCRIPT)
+	 $(VALGRIND_PATH) --quiet --tool=dhat --dhat-out-file=/dev/stdout \
+		./$< -m $(subst -, -k ,$*) $(PARAMS) 2>/dev/null \
+		| uv run --script $(PLOT_CACHE_ACCESS_SCRIPT) \
+		> $@
+stats-128: $(foreach K,$(RANGE),128-$(K).stats.png)
+stats-192: $(foreach K,$(RANGE),192-$(K).stats.png)
+stats-256: $(foreach K,$(RANGE),256-$(K).stats.png)
+stats: stats-128 stats-192 stats-256
+
+clean-stats:
+	$(RM) $(wildcard *.stats.png)
 
 clean:
 	$(RM) $(OUT) $(OBJ)

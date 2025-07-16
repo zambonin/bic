@@ -30,3 +30,10 @@ code is free of memory leaks.
 
 The helper script `plot-results.sh` uses Gnuplot to show the relative
 performance of each algorithm, cache type and security level.
+
+The helper script `plot-from-dhat.py` uses a modified version of Valgrind's
+Dynamic Heap Analysis Tool (DHAT) to show cache access statistics for larger
+data structures. These modifications can be found at [1]; the binary can be
+used here via the `VALGRIND_PATH` Makefile variable.
+
+[1] https://github.com/zambonin/valgrind

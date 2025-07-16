@@ -3,6 +3,10 @@
 #include "math.h"
 #include "utils.h"
 
+#if defined(DHAT)
+#include <valgrind/dhat.h>
+#endif
+
 cache_t bin_cache_t;
 cache_t comb_cache_t;
 cache_t acc_cache_t;
@@ -31,9 +35,17 @@ void generic_setup_cache(cache_t *cache, const uint32_t rows,
   assert(cache->data != NULL);
 }
 
+void after_cache_build(cache_t *cache) {
+  (void)cache;
+#if defined(DHAT)
+  DHAT_HISTOGRAM_MEMORY(cache->data);
+#endif
+}
+
 void bin_build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   (void)d;
-  generic_setup_cache(&bin_cache_t, n + k + 1, k, sizeof(uintx), (char *)"bin", BIN_CACHE);
+  generic_setup_cache(&bin_cache_t, n + k + 1, k, sizeof(uintx), (char *)"bin",
+                      BIN_CACHE);
 
   GET_CACHE_BIN(0, 0) = 1;
   for (uint32_t row = 1; row < bin_cache_t.rows; ++row) {
@@ -43,6 +55,8 @@ void bin_build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
                                 (uintx)GET_CACHE_BIN(row - 1, col);
     }
   }
+
+  after_cache_build(&bin_cache_t);
 }
 
 void comb_build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
@@ -55,6 +69,8 @@ void comb_build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
       GET_CACHE_COMB(row, col) = inner_bic(row, col, d);
     }
   }
+
+  after_cache_build(&comb_cache_t);
 }
 
 void scomb_build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
@@ -83,16 +99,21 @@ void scomb_build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
     GET_CACHE_SCOMB(0, col) = part;
     scomb_cache_t.total_size += length * sizeof(uintx);
   }
+
+  after_cache_build(&scomb_cache_t);
 }
 
 void acc_build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
-  generic_setup_cache(&acc_cache_t, n + 1, k, sizeof(uintx *), (char *)"acc", ACC_COMB_CACHE);
+  generic_setup_cache(&acc_cache_t, n + 1, k, sizeof(uintx *), (char *)"acc",
+                      ACC_COMB_CACHE);
 
   for (uint16_t row = 0; row < acc_cache_t.rows; ++row) {
     for (uint16_t col = 0; col < acc_cache_t.cols; ++col) {
       GET_CACHE_ACC(row, col) = inner_acc(row, col, d);
     }
   }
+
+  after_cache_build(&acc_cache_t);
 }
 
 void build_caches(const uint16_t n, const uint16_t k, const uint16_t d) {
