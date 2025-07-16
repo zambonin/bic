@@ -1,5 +1,5 @@
-CC = clang++
-CFLAGS = -Wall -Wextra -pedantic -O3 -ffast-math -march=native -mtune=native -Iinclude
+CC = g++
+CFLAGS = -Wall -Wextra -pedantic -O3 -march=native -mtune=native -Iinclude
 LDFLAGS = -lm
 SRC = $(wildcard src/*.c)
 OBJ = $(SRC:.c=.o)
@@ -18,7 +18,7 @@ default:
 
 $(OUT): $(OBJ)
 
-bitint: CC = clang
+bitint: CC = gcc
 bitint: CFLAGS += -std=gnu23 -DBITINT
 bitint: $(OUT)
 
@@ -44,7 +44,7 @@ test-192: $(foreach K,$(RANGE),192-$(K).test)
 test-256: $(foreach K,$(RANGE),256-$(K).test)
 test: test-128 test-192 test-256
 
-%.leak: CC = clang
+%.leak: CC = gcc
 %.leak: CFLAGS += -std=gnu23 -DBITINT -mno-avx512f
 %.leak: IT = 1
 %.leak: $(OUT) /usr/bin/valgrind
