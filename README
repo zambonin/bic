@@ -1,39 +1,69 @@
-Efficient implementations of algorithms for combinatorial (un)ranking of
-bounded integer compositions, which are sometimes used in applied cryptography
-(cf. hash-based signatures and sum-preserving encryption).
+┌─ Summary ──────────────────────────────────────────────────────────────────┐
+│                                                                            │
+│  Efficient implementations of algorithms for combinatorial (un)ranking of  │
+│  bounded integer compositions, which are sometimes used in applied         │
+│  cryptography (cf. hash-based signatures and sum-preserving encryption).   │
+│                                                                            │
+│  The implementations are based on the recent addition of `_BitInt`, which  │
+│  are bit-precise integer types, to C (N2763, standardized in C23). This is │
+│  an alternative to arithmetic backends for use cases where the underlying  │
+│  library is not available or cannot be used.                               │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
 
-The implementations are based on the recent addition of bit-precise integer
-types to C (N2763, standardized in C23). Therefore, a recent enough compiler is
-needed; GCC and Clang were successfully tested.
+┌─ Prerequisites ────────────────────────────────────────────────────────────┐
+│                                                                            │
+│  A GNU `make` binary is needed to invoke the rules. Support for `_BitInt`  │
+│  was added in GCC 14 and Clang 16.                                         │
+│                                                                            │
+│  For other arithmetic backends, which are provided to compare the          │
+│  performance, a C++ compiler is needed (not necessarily as recent as the   │
+│  ones above). The backends are exposed through Boost [1]; the necessary    │
+│  dependencies for each must be installed in the system.                    │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
 
-This is an alternative to GMP-based implementations for use cases where the
-library is not available or cannot be used. Nonetheless, there are C++ backends
-available to show the performance differences.
+┌─ Usage ────────────────────────────────────────────────────────────────────┐
+│                                                                            │
+│  Type `make $BACKEND` to compile the code, where $BACKEND is one of        │
+│  {bitint,boost-fix,boost-arb,mpz,tom}.                                     │
+│                                                                            │
+│  The target binary `./src/main` can be executed without flags to see the   │
+│  available configuration options.                                          │
+│                                                                            │
+│  The binary will unrank a random integer to a composition and rank it      │
+│  back, asserting that the functions work correctly, showing performance    │
+│  stats and other information. There are tests for several parameter sets   │
+│  which are relevant to cryptographic applications, executed via            │
+│  `make $BACKEND test`.                                                     │
+│                                                                            │
+│  There are equivalent `leak` rules, which use Valgrind to check that the   │
+│  code is free of memory leaks.                                             │
+│                                                                            │
+│  Other variables that control the behavior of the program can also be      │
+│  passed to the Makefile to experiment with specific parameters. For        │
+│  instance, the command                                                     │
+│                                                                            │
+│    make clean boost-fix ORDER=colex ALG=ps IT=1024 CACHE=bin test-256      │
+│                                                                            │
+│  will run tests for the unranking algorithm to the co-lexicographic order  │
+│  which reuses partial sums, using a wide Boost fixed-integer type for the  │
+│  arithmetic, with a pre-computed cache of binomial coefficients, for 1024  │
+│  repetitions at the 256-bit security level.                                │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
 
-Type `make $BACKEND` to compile the code, where $BACKEND is one of
-{bitint,boost-fix,boost-arb,mpz,tom} and `./src/main` to see the available
-options. Of course, the necessary dependencies must be installed in the system.
+┌─ Helper scripts ───────────────────────────────────────────────────────────┐
+│                                                                            │
+│  * `plot-results.sh` uses Gnuplot to show the relative performance of      │
+│    each (un)ranking algorithm by order, cache type and security level.     │
+│                                                                            │
+│  * `plot-from-dhat.py` uses a modified version of Valgrind's Dynamic Heap  │
+│     Analysis Tool (DHAT) to show cache access statistics for larger data   │
+│     structures. These modifications can be found at [1]; the binary can    │
+│     be used here via the `VALGRIND_PATH` Makefile variable.                │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
 
-Typing `make IT=$N test` unranks $N random integers for several parameter sets.
-Other variables that control the behavior of the program can also be passed to
-the Makefile to experiment with specific parameters. For instance, the command
-
-  `make clean boost-fix ORDER=colex ALG=ps IT=1024 CACHE=bin test-256`
-
-will run tests for the unranking algorithm to the co-lexicographic order which
-reuses partial sums, using a wide Boost fixed-integer type for the arithmetic,
-with a pre-computed cache of binomial coefficients, for 1024 repetitions at the
-256-bit security level.
-
-There are equivalent `make leak` commands, which use Valgrind to check that the
-code is free of memory leaks.
-
-The helper script `plot-results.sh` uses Gnuplot to show the relative
-performance of each algorithm, cache type and security level.
-
-The helper script `plot-from-dhat.py` uses a modified version of Valgrind's
-Dynamic Heap Analysis Tool (DHAT) to show cache access statistics for larger
-data structures. These modifications can be found at [1]; the binary can be
-used here via the `VALGRIND_PATH` Makefile variable.
-
-[1] https://github.com/zambonin/valgrind
+[1] https://www.boost.org/doc/libs/latest/libs/multiprecision/doc/html/boost_multiprecision/tut/ints.html
+[2] https://github.com/zambonin/valgrind
