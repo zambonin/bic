@@ -109,6 +109,10 @@ uintx inner_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
 }
 
 uintx bic(const uint16_t n, const uint16_t k, const uint16_t d) {
+  if (cache_type == RBO_COMB_CACHE) {
+    GET_CACHE_OR_CALC(RBO_COMB_CACHE, GET_CACHE_RBO(n, rbo_cache_t.col_of_original[k]), inner_bic);
+  }
+
   if (cache_type == SMALL_COMB_CACHE) {
     uintx *row = GET_CACHE_SCOMB(0, k - 1);
     uint16_t left = (uint16_t)row[0];
@@ -196,3 +200,35 @@ uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d) {
   free(message);
   return rank % inner_bic(n, k, d);
 }
+
+void calc_hset(uint16_t k, uint16_t L, uint16_t *H, size_t *h_size) {
+  if (k == 0 || k == 1) return;
+
+  size_t current_size = 0;
+  uint16_t last = UINT16_MAX;
+  
+  for (size_t p = 1; p <= L; ++p) {
+    uint16_t lo = k >> p; // floor(k / 2^p)
+    uint16_t hi = (uint16_t)((k + ((uint16_t)1 << p) - 1) >> p); // ceil(k / 2^p)
+
+    if (hi != last) {
+      H[current_size++] = hi;
+      last = hi;
+    }
+
+    if (lo != last) {
+      H[current_size++] = lo;
+      last = lo;
+    }
+  }
+
+  // Reversing the array to have it in ascending order
+  for (size_t i = 0; i < current_size / 2; ++i) {
+    uint16_t temp = H[i];
+    H[i] = H[current_size - 1 - i];
+    H[current_size - 1 - i] = temp;
+  }
+
+  *h_size = current_size;
+}
+

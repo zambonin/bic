@@ -7,6 +7,7 @@
 #endif
 
 cache_t bin_cache_t;
+cache_t rbo_cache_t;
 cache_t comb_cache_t;
 cache_t acc_cache_t;
 cache_t scomb_cache_t;
@@ -56,6 +57,43 @@ void bin_build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   }
 
   after_cache_build(&bin_cache_t);
+}
+
+void rbo_build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
+  if (k == 0) return; // k can't be 0 to calculate the halving set
+
+  if (k == 1) { // halving set is null when k = 1 (cache is just one column)
+    generic_setup_cache(&rbo_cache_t, n + 1, k + 1, sizeof(uintx),
+                      (char *)"rbo", RBO_COMB_CACHE);
+    rbo_cache_t.col_of_original = NULL;
+    GET_CACHE_RBO(0, 0) = 1;
+    for (uint16_t row = 0; row < rbo_cache_t.rows; ++row) {
+        GET_CACHE_RBO(row, 1) = inner_bic(row, 1, d);
+    }
+    return;
+  }
+
+  uint16_t L = lg(k);
+  uint16_t *H = (uint16_t *)malloc(2 * L * sizeof(uint16_t)); // 2 * L is an upper bound on the size of the halving set
+  size_t h_size = 0; // h_size will be the actual size of the halving set
+  calc_hset(k, L, H, &h_size); 
+
+  generic_setup_cache(&rbo_cache_t, n + 1, (uint16_t)h_size, sizeof(uintx),
+                      (char *)"rbo", RBO_COMB_CACHE);
+
+  int16_t *col_of_original = (int16_t *)malloc((k + 1) * sizeof(int16_t));
+  for (int i = 0; i < k + 1; i++) col_of_original[i] = -1; // -1 means that the col doesn´t exists in H
+  for (size_t idx = 0; idx < h_size; idx++) col_of_original[H[idx]] = idx; // maps the columns
+  rbo_cache_t.col_of_original = col_of_original;
+
+  for (uint32_t row = 0; row < rbo_cache_t.rows; ++row) {
+    for (size_t col = 0; col < h_size; ++col) {
+      GET_CACHE_RBO(row, col) = inner_bic(row, H[col], d);
+    }
+  }
+
+  free(H);
+  after_cache_build(&rbo_cache_t);
 }
 
 void comb_build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
@@ -122,6 +160,11 @@ void build_caches(const uint16_t n, const uint16_t k, const uint16_t d) {
 }
 
 void bin_free_cache() { free(bin_cache_t.data); }
+
+void rbo_free_cache() {
+  free(rbo_cache_t.data);
+  if (rbo_cache_t.col_of_original != NULL) free(rbo_cache_t.col_of_original);
+}
 
 void comb_free_cache() { free(comb_cache_t.data); }
 

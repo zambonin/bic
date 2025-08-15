@@ -32,4 +32,6 @@ uintx bic_acc(const uint16_t n, const uint16_t k, const uint16_t d,
 
 uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d);
 
+void calc_hset(uint16_t k, uint16_t L, uint16_t *H, size_t *h_size);
+
 #endif

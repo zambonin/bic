@@ -9,6 +9,9 @@
 #define GET_CACHE_BIN(row, col)                                                \
   (*(uintx *)cache_get_element(&bin_cache_t, row, col))
 
+#define GET_CACHE_RBO(row, col)                                                \
+  (*(uintx *)cache_get_element(&rbo_cache_t, row, col))
+
 #define GET_CACHE_COMB(row, col)                                               \
   (*(uintx *)cache_get_element(&comb_cache_t, row, col))
 
@@ -27,10 +30,11 @@
 enum {
   NO_CACHE = 0,
   BIN_CACHE = 1,
-  COMB_CACHE = 2,
-  SMALL_COMB_CACHE = 3,
-  ACC_COMB_CACHE = 4,
-  SENTINEL_LENGTH = 5,
+  RBO_COMB_CACHE = 2,
+  COMB_CACHE = 3,
+  SMALL_COMB_CACHE = 4,
+  ACC_COMB_CACHE = 5,
+  SENTINEL_LENGTH = 6,
 };
 
 extern int cache_type;
@@ -39,6 +43,7 @@ typedef struct {
   void *data;
   uint32_t rows;
   uint32_t cols;
+  int16_t *col_of_original;
   size_t elem_size;
   char *name;
   uint8_t type;
@@ -46,6 +51,7 @@ typedef struct {
 } cache_t;
 
 extern cache_t bin_cache_t;
+extern cache_t rbo_cache_t;
 extern cache_t comb_cache_t;
 extern cache_t scomb_cache_t;
 extern cache_t acc_cache_t;
@@ -62,26 +68,28 @@ typedef void (*build_cache_funcptr_t)(const uint16_t n, const uint16_t k,
 
 void build_caches(const uint16_t n, const uint16_t k, const uint16_t d);
 void bin_build_cache(const uint16_t n, const uint16_t k, const uint16_t d);
+void rbo_build_cache(const uint16_t n, const uint16_t k, const uint16_t d);
 void comb_build_cache(const uint16_t n, const uint16_t k, const uint16_t d);
 void scomb_build_cache(const uint16_t n, const uint16_t k, const uint16_t d);
 void acc_build_cache(const uint16_t n, const uint16_t k, const uint16_t d);
 
 static const build_cache_funcptr_t cache_builders[SENTINEL_LENGTH] = {
-    build_caches,      bin_build_cache, comb_build_cache,
-    scomb_build_cache, acc_build_cache,
+    build_caches,      bin_build_cache, rbo_build_cache, 
+    comb_build_cache,  scomb_build_cache, acc_build_cache, 
 };
 
 typedef void (*free_cache_funcptr_t)(void);
 
 void free_caches();
 void bin_free_cache();
+void rbo_free_cache();
 void comb_free_cache();
 void scomb_free_cache();
 void acc_free_cache();
 
 static const free_cache_funcptr_t cache_demolishers[SENTINEL_LENGTH] = {
-    free_caches,      bin_free_cache, comb_free_cache,
-    scomb_free_cache, acc_free_cache,
+    free_caches,      bin_free_cache, rbo_free_cache, comb_free_cache,
+    scomb_free_cache, acc_free_cache, 
 };
 
 #endif
