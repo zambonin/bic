@@ -1,5 +1,4 @@
 #include "cache.h"
-#include "io.h"
 #include "math.h"
 #include "utils.h"
 

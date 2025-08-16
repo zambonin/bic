@@ -1,6 +1,5 @@
 #include "math.h"
 #include "cache.h"
-#include "io.h"
 #include "utils.h"
 
 #if defined(BITINT)

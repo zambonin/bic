@@ -25,31 +25,33 @@
 
 ┌─ Usage ────────────────────────────────────────────────────────────────────┐
 │                                                                            │
-│  Type `make $BACKEND` to compile the code, where $BACKEND is one of        │
-│  {bitint,boost-fix,boost-arb,mpz,tom}.                                     │
+│  Type `make $BACKEND $TARGET` to compile the code, where $BACKEND is one   │
+│  of {bitint,boost-fix,boost-arb,mpz,tom}, and $TARGET is the path to a     │
+│  file in the `bin` folder.                                                 │
 │                                                                            │
-│  The target binary `./src/main` can be executed without flags to see the   │
-│  available configuration options.                                          │
-│                                                                            │
-│  The binary will unrank a random integer to a composition and rank it      │
-│  back, asserting that the functions work correctly, showing performance    │
-│  stats and other information. There are tests for several parameter sets   │
-│  which are relevant to cryptographic applications, executed via            │
-│  `make $BACKEND test`.                                                     │
-│                                                                            │
-│  There are equivalent `leak` rules, which use Valgrind to check that the   │
-│  code is free of memory leaks.                                             │
+│  A simple CLI is given at `bin/cli.c` and, after compiled, can be executed │
+│  without flags to see the available options. It will unrank a random       │
+│  integer to a composition and rank it back, asserting that the functions   │
+│  work correctly, showing performance stats and other information.          │
 │                                                                            │
 │  Other variables that control the behavior of the program can also be      │
 │  passed to the Makefile to experiment with specific parameters. For        │
 │  instance, the command                                                     │
 │                                                                            │
-│    make clean boost-fix ORDER=colex ALG=ps IT=1024 CACHE=bin test-256      │
+│    make clean boost-fix TARGET=bin/cli.c ORDER=colex ALG=ps IT=1024        │
+│       CACHE=bin cli-256                                                    │
 │                                                                            │
 │  will run tests for the unranking algorithm to the co-lexicographic order  │
 │  which reuses partial sums, using a wide Boost fixed-integer type for the  │
-│  arithmetic, with a pre-computed cache of binomial coefficients, for 1024  │
-│  repetitions at the 256-bit security level.                                │
+│  arithmetic [1], with a pre-computed cache of binomial coefficients, for   │
+│  1024 repetitions at the 256-bit security level.                           │
+│                                                                            │
+│  A program that tests every combination of flags is given at `bin/test.c`. │
+│  Type `make $BACKEND TARGET=bin/test.c test` to execute a standard test    │
+│  suite.                                                                    │
+│                                                                            │
+│  Type `make TARGET=bin/test.c leak` to assert that the code is free of     │
+│  memory leaks via Valgrind.                                                │
 │                                                                            │
 └────────────────────────────────────────────────────────────────────────────┘
 
@@ -60,7 +62,7 @@
 │                                                                            │
 │  * `plot-from-dhat.py` uses a modified version of Valgrind's Dynamic Heap  │
 │     Analysis Tool (DHAT) to show cache access statistics for larger data   │
-│     structures. These modifications can be found at [1]; the binary can    │
+│     structures. These modifications can be found at [2]; the binary can    │
 │     be used here via the `VALGRIND_PATH` Makefile variable.                │
 │                                                                            │
 └────────────────────────────────────────────────────────────────────────────┘

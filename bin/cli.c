@@ -1,9 +1,19 @@
-#include "io.h"
+#include <getopt.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+
 #include "cache.h"
 #include "colex.h"
 #include "gray.h"
 #include "math.h"
 #include "rbo.h"
+#include "utils.h"
+
+#define INVALID_PARAM                                                          \
+  if (fprintf(stderr, "Invalid parameter.\n")) {                               \
+    return 1;                                                                  \
+  }
 
 static const struct option long_options[] = {
     {"sum", required_argument, 0, 'n'},
@@ -53,7 +63,7 @@ static const char *help_text =
     "           * `ad` (binary search over accumulated sums of #C(n, k, d)\n"
     "               calculated directly on demand).\n"
     "\n"
-    "  -i, --iterations=<uint64_t>\n"
+    "  -i, --iterations=<uint32_t>\n"
     "         Number to repeatedly unrank random integers.\n"
     "\n"
     "  -c, --cache=<mode>\n"
@@ -170,6 +180,56 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
   } else if (*k * *d < *n) {
     INVALID_PARAM;
   }
+
+  return 0;
+}
+
+int32_t main(int32_t argc, char **argv) {
+  uint16_t n = 0;
+  uint16_t k = 0;
+  uint16_t d = 0;
+  uint16_t m = 0;
+  uint32_t iterations = 1;
+  uint32_t seed = time(NULL);
+  order ord = colex;
+  strategy_func strategy = mingen;
+
+  if (parse_args(argc, argv, &n, &k, &d, &iterations, &ord, &m, &strategy) >
+      0) {
+    return 1;
+  }
+
+  srandom(seed);
+
+  build_caches(n, k, d);
+
+  long double utime = 0;
+  long double ucycles = 0;
+
+  long double rtime = 0;
+  long double rcycles = 0;
+
+  uint32_t *comp = (uint32_t *)malloc(k * sizeof(uint32_t));
+
+  for (uint32_t it = 0; it < iterations; ++it) {
+    memset(comp, 0, k * sizeof(uint32_t));
+
+    const uintx r = random_rank(n, k, d);
+
+    PERF(utime, ucycles, (*ord.unrank)(comp, n, k, d, r), unrank);
+
+    PERF(rtime, rcycles, const uintx rr = (*ord.rank)(n, k, d, comp), rank);
+
+    assert(r == rr);
+
+    check_valid_bounded_composition(comp, n, k, d);
+  }
+
+  pprint(n, k, d, iterations, utime, ucycles, rtime, rcycles);
+
+  free_caches();
+
+  free(comp);
 
   return 0;
 }

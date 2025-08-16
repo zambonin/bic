@@ -2,8 +2,9 @@ CC = g++
 CFLAGS = -Wall -Wextra -pedantic -O3 -march=native -mtune=native -Iinclude
 LDFLAGS = -lm
 SRC = $(wildcard src/*.c)
-OBJ = $(SRC:.c=.o)
-OUT = src/main
+TARGET ?= bin/cli.c
+OBJ = $(SRC:.c=.o) $(TARGET:.c=.o)
+OUT = $(TARGET:.c=)
 
 VALGRIND_PATH ?= /usr/bin/valgrind
 PLOT_CACHE_ACCESS_SCRIPT = plot-from-dhat.py
@@ -38,26 +39,24 @@ tom: CFLAGS += -x c++ -DBOOST_TOM_INT -std=c++20
 tom: LDFLAGS += -ltommath
 tom: $(OUT)
 
-%.test: $(OUT)
+test: $(OUT)
+	./$< -i $(IT) -s 0
+
+%.cli: $(OUT)
 	./$< -m $(subst -, -k ,$*) $(PARAMS)
 
-test-128: $(foreach K,$(RANGE),128-$(K).test)
-test-192: $(foreach K,$(RANGE),192-$(K).test)
-test-256: $(foreach K,$(RANGE),256-$(K).test)
-test: test-128 test-192 test-256
+cli-128: $(foreach K,$(RANGE),128-$(K).cli)
+cli-192: $(foreach K,$(RANGE),192-$(K).cli)
+cli-256: $(foreach K,$(RANGE),256-$(K).cli)
+cli: cli-128 cli-192 cli-256
 
-%.leak: CC = gcc
-%.leak: CFLAGS += -std=gnu23 -DBITINT -mno-avx512f
-%.leak: IT = 1
-%.leak: $(OUT) $(VALGRIND_PATH)
+leak: CC = gcc
+leak: CFLAGS += -std=gnu23 -DBITINT -mno-avx512f
+leak: IT = 1
+leak: $(OUT) $(VALGRIND_PATH)
 	$(VALGRIND_PATH) --quiet --exit-on-first-error=yes --leak-check=full \
 		--errors-for-leak-kinds=all --show-leak-kinds=all --error-exitcode=1 \
-		./$< -m $(subst -, -k ,$*) $(PARAMS) 2>/dev/null
-
-leak-128: $(foreach K,$(RANGE),128-$(K).leak)
-leak-192: $(foreach K,$(RANGE),192-$(K).leak)
-leak-256: $(foreach K,$(RANGE),256-$(K).leak)
-leak: leak-128 leak-192 leak-256
+		./$< -i $(IT)
 
 %.stats.png: CC = gcc
 %.stats.png: CFLAGS += -std=gnu23 -DBITINT -mno-avx512f -DDHAT
@@ -75,4 +74,4 @@ clean-stats:
 	$(RM) $(wildcard *.stats.png)
 
 clean:
-	$(RM) $(OUT) $(OBJ)
+	$(RM) $(OUT) $(wildcard src/*.o) $(wildcard bin/*.o)
