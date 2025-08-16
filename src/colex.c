@@ -1,4 +1,5 @@
 #include "colex.h"
+#include "cache.h"
 #include "common.h"
 #include "math.h"
 #include "utils.h"
@@ -67,6 +68,10 @@ void colex_unrank_acc_linear(uint32_t *rop, const uint16_t n, const uint16_t k,
     for (part = 0; count = sums[part + 1], rank >= count; ++part) {
     }
     rank -= sums[part];
+
+    if (cache_type < ACC_COMB_CACHE) {
+      free(sums);
+    }
   }
 
   rop[0] = it_n;
@@ -83,6 +88,10 @@ void colex_unrank_acc_bisect(uint32_t *rop, const uint16_t n, const uint16_t k,
     size_t length = (size_t)sums[d + 2];
     part = bsearch_insertion(&rank, sums, length, sizeof(uintx));
     rank -= sums[part];
+
+    if (cache_type < ACC_COMB_CACHE) {
+      free(sums);
+    }
   }
 
   rop[0] = it_n;

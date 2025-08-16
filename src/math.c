@@ -15,6 +15,17 @@ long double lg_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
 }
 
 void mingen(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
+  /*
+   * |C(n, k, d)| is bounded by |C(n, k, n)| = \binom{n + k - 1}{k - 1}.
+   *
+   * The binomial is approximately n^{k - 1} / (k - 1)!. Taking the base-2 log,
+   * we have (k - 1) * (lg(n) - lg(k - 1)), ignoring the smaller part of the
+   * denominator, and we can set lg(n) = 16 for uint16_t.
+   */
+  if (k <= 1 || (m >= ((k - 1) * (16 - lg(k - 1))))) {
+    return;
+  }
+
   uint16_t it_d = 0;
   uint16_t it_n = (k * it_d) / 2;
 
@@ -38,6 +49,10 @@ void mingen(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
 }
 
 void minver(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
+  if (k <= 1 || (m >= ((k - 1) * (16 - lg(k - 1))))) {
+    return;
+  }
+
   uint16_t it_n;
   for (it_n = 1; lg_bic(it_n, k, it_n) < m; ++it_n) {
   }
@@ -196,7 +211,7 @@ uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d) {
 
   return rank % inner_bic(n, k, d);
 #else
-  boost::random::uniform_int_distribution<uintx> ui(0, inner_bic(n, k, d));
+  boost::random::uniform_int_distribution<uintx> ui(0, inner_bic(n, k, d) - 1);
   return ui(rd);
 #endif
 }
