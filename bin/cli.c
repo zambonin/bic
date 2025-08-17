@@ -25,6 +25,7 @@ static const struct option long_options[] = {
     {"cache", required_argument, 0, 'c'},
     {"target", required_argument, 0, 'm'},
     {"strategy", required_argument, 0, 's'},
+    {"randomness", required_argument, 0, 'r'},
     {0, 0, 0, 0},
 };
 
@@ -80,7 +81,10 @@ static const char *help_text =
     "         Use <mode> to choose `n` and `d` according to `m` and `k`.\n"
     "         Available options are:\n"
     "           * `gen` (minimize `d` at all costs);\n"
-    "           * `ver` (minimize `n` at all costs).\n";
+    "           * `ver` (minimize `n` at all costs).\n"
+    "\n"
+    "  -r, --randomness=<uint32_t>\n"
+    "         Set the seed for the random number generator.\n";
 
 void pprint(const uint16_t n, const uint16_t k, const uint16_t d,
             const uint32_t it, const long double utime,
@@ -95,9 +99,9 @@ void pprint(const uint16_t n, const uint16_t k, const uint16_t d,
 
 int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
                    uint16_t *d, uint32_t *iterations, order *ord, uint16_t *m,
-                   strategy_func *strategy) {
+                   strategy_func *strategy, uint32_t *seed) {
   for (;;) {
-    int c = getopt_long(argc, argv, "n:k:d:o:a:i:c:m:p:s:", long_options, NULL);
+    int c = getopt_long(argc, argv, "n:k:d:o:a:i:c:m:s:r:", long_options, NULL);
     if (c == -1) {
       break;
     }
@@ -166,6 +170,9 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
       } else
         INVALID_PARAM;
       break;
+    case 'r':
+      *seed = strtol(optarg, NULL, 0);
+      break;
     default:
       return 1;
     }
@@ -194,8 +201,8 @@ int32_t main(int32_t argc, char **argv) {
   order ord = colex;
   strategy_func strategy = mingen;
 
-  if (parse_args(argc, argv, &n, &k, &d, &iterations, &ord, &m, &strategy) >
-      0) {
+  if (parse_args(argc, argv, &n, &k, &d, &iterations, &ord, &m, &strategy,
+                 &seed) > 0) {
     return 1;
   }
 
