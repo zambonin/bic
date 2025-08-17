@@ -123,7 +123,7 @@ void run_round_trip(order ord, const uint16_t n, const uint16_t k,
 void report_test(const char *order_name, const char *algo_name,
                  const char *strat_name, uint32_t n, uint32_t k, uint32_t d) {
   long double m_bits = lg(inner_bic_with_sums(n, k, d, NULL, inner_bin));
-  printf("n=%-5u k=%-5u d=%-5u m=%-10.4Lf b=%-5u c=%-2u o=%-5s a=%-7s s=%-6s\n",
+  printf("n=%-5u k=%-5u d=%-5u m=%-10.4Lf b=%-5f c=%-2u o=%-5s a=%-7s s=%-6s\n",
          n, k, d, m_bits, BIT_LENGTH, cache_type, order_name, algo_name,
          strat_name);
 }
