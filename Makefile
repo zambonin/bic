@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -Wall -Wextra -pedantic -O3 -march=native -mtune=native -Iinclude
+CFLAGS = -Wall -Wextra -pedantic -O3 -march=native -mtune=native -Iinclude -D_XOPEN_SOURCE=500
 LDFLAGS = -lm
 SRC = $(wildcard src/*.c)
 TARGET ?= bin/cli.c
@@ -23,7 +23,7 @@ default:
 $(OUT): $(OBJ)
 
 bitint: CC = gcc
-bitint: CFLAGS += -std=gnu23 -DBITINT=$(INTWIDTH)
+bitint: CFLAGS += -std=c23 -DBITINT=$(INTWIDTH)
 bitint: $(OUT)
 
 boost-fix: CFLAGS += -x c++ -DBOOST_FIX_INT -std=c++20
@@ -52,7 +52,7 @@ cli-256: $(foreach K,$(RANGE),256-$(K).cli)
 cli: cli-128 cli-192 cli-256
 
 leak: CC = gcc
-leak: CFLAGS += -std=gnu23 -DBITINT=$(INTWIDTH) -mno-avx512f
+leak: CFLAGS += -std=c23 -DBITINT=$(INTWIDTH) -mno-avx512f
 leak: IT = 1
 leak: $(OUT) $(VALGRIND_PATH)
 	$(VALGRIND_PATH) --quiet --exit-on-first-error=yes --leak-check=full \
@@ -60,7 +60,7 @@ leak: $(OUT) $(VALGRIND_PATH)
 		./$< -i $(IT)
 
 %.stats.png: CC = gcc
-%.stats.png: CFLAGS += -std=gnu23 -DBITINT=$(INTWIDTH) -mno-avx512f -DDHAT
+%.stats.png: CFLAGS += -std=c23 -DBITINT=$(INTWIDTH) -mno-avx512f -DDHAT
 %.stats.png: $(OUT) $(VALGRIND_PATH) $(PLOT_CACHE_ACCESS_SCRIPT)
 	 $(VALGRIND_PATH) --quiet --tool=dhat --dhat-out-file=/dev/stdout \
 		./$< -m $(subst -, -k ,$*) $(PARAMS) 2>/dev/null \

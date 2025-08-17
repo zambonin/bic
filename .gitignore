@@ -1,3 +1,4 @@
 bin/cli
 bin/test
 *.png
+*.o
