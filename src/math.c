@@ -191,27 +191,31 @@ uintx bic_acc(const uint16_t n, const uint16_t k, const uint16_t d,
 }
 
 uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d) {
-#if defined(BITINT)
-  long double comb_lg = lg_bic(n, k, d);
-  uint16_t len = (1 + comb_lg) / sizeof(uint64_t);
+  uintx comb = inner_bic_with_sums(n, k, d, NULL, inner_bin);
+  uint16_t len = (1 + lg(comb)) / sizeof(uint64_t);
   len += (len == 0);
 
   uint8_t *message = (uint8_t *)calloc(len, sizeof(uint8_t));
   for (uint16_t i = 0; i < len; ++i) {
     message[i] = random();
   }
-
   uintx rank = 0;
-  unsigned char *ptr = (unsigned char *)&rank;
 
+#if defined(BITINT)
+  unsigned char *ptr = (unsigned char *)&rank;
   for (uint16_t i = 0; i < len; ++i) {
     ptr[len - 1 - i] = message[i];
   }
-  free(message);
-
-  return rank % inner_bic(n, k, d);
-#else
-  boost::random::uniform_int_distribution<uintx> ui(0, inner_bic(n, k, d) - 1);
-  return ui(rd);
+#elif defined(BOOST_FIX_INT) || defined(BOOST_ARB_INT)
+  boost::multiprecision::detail::import_bits_fast(rank, message, message + len);
+#elif defined(BOOST_MPZ_INT)
+  mpz_import(rank.backend().data(), len, 1, sizeof(uint8_t), 0, 0, message);
+#elif defined(BOOST_TOM_INT)
+  mp_err err =
+      mp_unpack(&rank.backend().data(), len, 1, sizeof(uint8_t), 0, 0, message);
+  (void)err;
 #endif
+
+  free(message);
+  return rank % comb;
 }

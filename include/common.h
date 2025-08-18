@@ -39,10 +39,6 @@ typedef _BitInt(BITINT) intx;
 static const double BIT_LENGTH = BITINT;
 #else
 #include <boost/multiprecision/cpp_bin_float.hpp>
-#include <boost/random.hpp>
-#include <random>
-
-static std::random_device rd;
 #endif
 
 typedef struct {
