@@ -1,6 +1,5 @@
 CC = g++
 CFLAGS = -Wall -Wextra -pedantic -O3 -march=native -mtune=native -Iinclude -D_XOPEN_SOURCE=500
-LDFLAGS = -lm
 SRC = $(wildcard src/*.c)
 TARGET ?= bin/cli.c
 OBJ = $(SRC:.c=.o) $(TARGET:.c=.o)

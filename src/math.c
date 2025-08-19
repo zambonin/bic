@@ -3,15 +3,49 @@
 #include "utils.h"
 
 #if defined(BITINT)
-long double lg(const uintx u) { return logl(u) / logl(2); }
+long double lg(const uintx u) {
+  // actually a truncated logarithm
+  if (u == 0) {
+    return -1.0;
+  }
+  for (uint16_t i = BIT_LENGTH - 1; i > 0; i--) {
+    if ((u >> i) & 1) {
+      return i;
+    }
+  }
+  return 0;
+}
 #else
 long double lg(const uintx u) {
   return (long double)log2(boost::multiprecision::cpp_bin_float_100(u));
 }
 #endif
 
-long double lg_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
-  return lg(inner_bic_with_sums(n, k, d, NULL, inner_bin));
+uint16_t bits_fit_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
+  return 1 + ((uint16_t)lg(inner_bic_with_sums(n, k, d, NULL, inner_bin)));
+}
+
+double asqrt(double x) {
+  if (x < 0) {
+    return -1.0;
+  }
+  if (x == 0) {
+    return 0;
+  }
+  const double e = 0.000001;
+
+  double z = x / 2.0;
+  double y = 0.0;
+  while (z - y > e) {
+    y = z;
+    z = (z + x / z) / 2.0;
+  }
+  return z;
+}
+
+bool bic_geq_2_pow_m(const uint16_t m, const uint16_t n, const uint16_t k,
+                     const uint16_t d) {
+  return (bool)(inner_bic_with_sums(n, k, d, NULL, inner_bin) >> m);
 }
 
 void mingen(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
@@ -29,17 +63,17 @@ void mingen(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
   uint16_t it_d = 0;
   uint16_t it_n = (k * it_d) / 2;
 
-  while (lg_bic(it_n, k, it_d) < m) {
+  while (!bic_geq_2_pow_m(m, it_n, k, it_d)) {
     ++it_d;
     it_n = (k * it_d) / 2;
   }
 
-  while (lg_bic(it_n, k, it_d) >= m) {
+  while (bic_geq_2_pow_m(m, it_n, k, it_d)) {
     --it_d;
   }
   ++it_d;
 
-  while (lg_bic(it_n, k, it_d) >= m) {
+  while (bic_geq_2_pow_m(m, it_n, k, it_d)) {
     --it_n;
   }
   ++it_n;
@@ -54,11 +88,11 @@ void minver(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
   }
 
   uint16_t it_n;
-  for (it_n = 1; lg_bic(it_n, k, it_n) < m; ++it_n) {
+  for (it_n = 1; !bic_geq_2_pow_m(m, it_n, k, it_n); ++it_n) {
   }
 
   uint16_t it_d;
-  for (it_d = 1; lg_bic(it_n, k, it_d) < m; ++it_d) {
+  for (it_d = 1; !bic_geq_2_pow_m(m, it_n, k, it_d); ++it_d) {
   }
 
   *n = it_n;
@@ -191,8 +225,7 @@ uintx bic_acc(const uint16_t n, const uint16_t k, const uint16_t d,
 }
 
 uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d) {
-  uintx comb = inner_bic_with_sums(n, k, d, NULL, inner_bin);
-  uint16_t len = (1 + lg(comb)) / sizeof(uint64_t);
+  uint16_t len = bits_fit_bic(n, k, d) / sizeof(uint64_t);
   len += (len == 0);
 
   uint8_t *message = (uint8_t *)calloc(len, sizeof(uint8_t));
@@ -217,5 +250,5 @@ uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d) {
 #endif
 
   free(message);
-  return rank % comb;
+  return rank % inner_bic(n, k, d);
 }

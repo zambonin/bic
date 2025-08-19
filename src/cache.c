@@ -82,7 +82,7 @@ void scomb_build_cache(const uint16_t n, const uint16_t k, const uint16_t d) {
   for (uint16_t col = 0; col < scomb_cache_t.cols; ++col) {
     uint16_t j = col + 1;
     double mean = j * n / k;
-    double stddev = sqrt(j * variance * (k - j) / k);
+    double stddev = asqrt(j * variance * (k - j) / k);
     uint16_t left = max(mean - level * stddev, 0);
     uint16_t right = min(mean + level * stddev, n);
 

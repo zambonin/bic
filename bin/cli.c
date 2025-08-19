@@ -93,7 +93,7 @@ void pprint(const uint16_t n, const uint16_t k, const uint16_t d,
   printf("n = %5d, k = %5d, d = %5d, i = %5u, m = %10.4Lf, b = %5f, c = %2u, "
          "unrank avg = %14.2Lf ns, %14.2Lf cyc., "
          "rank avg = %14.2Lf ns, %14.2Lf cyc.\n",
-         n, k, d, it, lg_bic(n, k, d), BIT_LENGTH, cache_type, utime / it,
+         n, k, d, it, bits_fit_bic(n, k, d), BIT_LENGTH, cache_type, utime / it,
          ucycles / it, rtime / it, rcycles / it);
 }
 
