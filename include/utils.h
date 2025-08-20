@@ -29,6 +29,12 @@ typedef struct {
   void *last_visited;
 } bsearch_insertion_state;
 
+typedef struct {
+  const uint16_t m;
+  const uint16_t k;
+  const uint16_t *v;
+} ctx_t;
+
 // https://github.com/sphincs/sphincsplus/blob/7ec789ac/ref/test/cycles.c
 uint64_t cycles(void);
 
@@ -39,9 +45,16 @@ int32_t max(const int32_t a, const int32_t b);
 void check_valid_bounded_composition(const uint32_t *c, const uint16_t n,
                                      const uint16_t k, const uint16_t d);
 
-int cmp(const void *c, const void *d);
-
 size_t bsearch_insertion(const void *key, const void *base, size_t nel,
                          size_t width);
+
+bool bic_geq_2_pow_m(const uint16_t m, const uint16_t n, const uint16_t k,
+                     const uint16_t d);
+
+// §4 of 10.1007/s13389-021-00264-9
+void mingen(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d);
+
+// §2.3 of 10.1007/s13389-021-00264-9
+void minver(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d);
 
 #endif

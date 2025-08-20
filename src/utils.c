@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "math.h"
 
 uint64_t cycles(void) {
   uint64_t result = 0;
@@ -53,4 +54,74 @@ size_t bsearch_insertion(const void *key, const void *base, size_t nel,
   }
 
   return last - (uintx *)base;
+}
+
+bool bic_geq_2_pow_m(const uint16_t m, const uint16_t n, const uint16_t k,
+                     const uint16_t d) {
+  return (bool)(inner_bic_with_sums(n, k, d, NULL, inner_bin) >> m);
+}
+
+static void linear_search(uint16_t *rop, const uint16_t lo, const uint16_t hi,
+                          bool (*p)(const uint16_t, const void *),
+                          const void *ctx) {
+  uint16_t i;
+  for (i = lo; i <= hi && !p(i, ctx); ++i) {
+  }
+  *rop = i;
+}
+
+static bool unimodal(const uint16_t val, const void *ctx) {
+  ctx_t *c = (ctx_t *)ctx;
+  uint16_t max_n = (c->k * val + 1) / 2;
+  return bic_geq_2_pow_m(c->m, max_n, c->k, val);
+}
+
+static bool min_n(const uint16_t val, const void *ctx) {
+  ctx_t *c = (ctx_t *)ctx;
+  return bic_geq_2_pow_m(c->m, val, c->k, *(c->v));
+}
+
+void mingen(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
+  /*
+   * |C(n, k, d)| is bounded by |C(n, k, n)| = \binom{n + k - 1}{k - 1}.
+   *
+   * The binomial is approximately n^{k - 1} / (k - 1)!. Taking the base-2 log,
+   * we have (k - 1) * (lg(n) - lg(k - 1)), ignoring the smaller part of the
+   * denominator, and we can set lg(n) = 16 for uint16_t.
+   */
+  if (k <= 1 || (m >= ((k - 1) * (16 - lg(k - 1))))) {
+    return;
+  }
+
+  ctx_t c = {.m = m, .k = k, .v = d};
+  linear_search(d, 0, UINT16_MAX, unimodal, &c);
+  if (*d == UINT16_MAX) {
+    *n = UINT16_MAX;
+    return;
+  }
+  linear_search(n, 0, (k * *d + 1) / 2, min_n, &c);
+}
+
+static bool unbounded_parts(const uint16_t val, const void *ctx) {
+  ctx_t *c = (ctx_t *)ctx;
+  return bic_geq_2_pow_m(c->m, val, c->k, val);
+}
+
+static bool min_d(const uint16_t val, const void *ctx) {
+  ctx_t *c = (ctx_t *)ctx;
+  return bic_geq_2_pow_m(c->m, *(c->v), c->k, val);
+}
+
+void minver(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
+  if (k <= 1 || (m >= ((k - 1) * (16 - lg(k - 1))))) {
+    return;
+  }
+
+  ctx_t c = {.m = m, .k = k, .v = n};
+  linear_search(n, 0, UINT16_MAX, unbounded_parts, &c);
+  if (*n == UINT16_MAX) {
+    *d = UINT16_MAX;
+    return;
+  }
+  linear_search(d, 0, *n, min_d, &c);
 }

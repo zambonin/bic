@@ -43,62 +43,6 @@ double asqrt(double x) {
   return z;
 }
 
-bool bic_geq_2_pow_m(const uint16_t m, const uint16_t n, const uint16_t k,
-                     const uint16_t d) {
-  return (bool)(inner_bic_with_sums(n, k, d, NULL, inner_bin) >> m);
-}
-
-void mingen(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
-  /*
-   * |C(n, k, d)| is bounded by |C(n, k, n)| = \binom{n + k - 1}{k - 1}.
-   *
-   * The binomial is approximately n^{k - 1} / (k - 1)!. Taking the base-2 log,
-   * we have (k - 1) * (lg(n) - lg(k - 1)), ignoring the smaller part of the
-   * denominator, and we can set lg(n) = 16 for uint16_t.
-   */
-  if (k <= 1 || (m >= ((k - 1) * (16 - lg(k - 1))))) {
-    return;
-  }
-
-  uint16_t it_d = 0;
-  uint16_t it_n = (k * it_d) / 2;
-
-  while (!bic_geq_2_pow_m(m, it_n, k, it_d)) {
-    ++it_d;
-    it_n = (k * it_d) / 2;
-  }
-
-  while (bic_geq_2_pow_m(m, it_n, k, it_d)) {
-    --it_d;
-  }
-  ++it_d;
-
-  while (bic_geq_2_pow_m(m, it_n, k, it_d)) {
-    --it_n;
-  }
-  ++it_n;
-
-  *n = it_n;
-  *d = it_d;
-}
-
-void minver(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
-  if (k <= 1 || (m >= ((k - 1) * (16 - lg(k - 1))))) {
-    return;
-  }
-
-  uint16_t it_n;
-  for (it_n = 1; !bic_geq_2_pow_m(m, it_n, k, it_n); ++it_n) {
-  }
-
-  uint16_t it_d;
-  for (it_d = 1; !bic_geq_2_pow_m(m, it_n, k, it_d); ++it_d) {
-  }
-
-  *n = it_n;
-  *d = it_d;
-}
-
 // from FXT: aux0/binomial.h
 uintx inner_bin(const uint16_t n, const uint16_t k, const uint16_t d) {
   (void)d;
