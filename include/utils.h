@@ -48,6 +48,8 @@ void check_valid_bounded_composition(const uint32_t *c, const uint16_t n,
 size_t bsearch_insertion(const void *key, const void *base, size_t nel,
                          size_t width);
 
+uint16_t bits_fit_bic(const uint16_t n, const uint16_t k, const uint16_t d);
+
 bool bic_geq_2_pow_m(const uint16_t m, const uint16_t n, const uint16_t k,
                      const uint16_t d);
 
@@ -56,5 +58,7 @@ void mingen(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d);
 
 // §2.3 of 10.1007/s13389-021-00264-9
 void minver(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d);
+
+uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d);
 
 #endif

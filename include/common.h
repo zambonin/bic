@@ -52,6 +52,4 @@ typedef struct {
 typedef void (*strategy_func)(const uint16_t, uint16_t *, const uint16_t,
                               uint16_t *);
 
-typedef uintx (*math_func)(const uint16_t, const uint16_t, const uint16_t);
-
 #endif

@@ -56,9 +56,13 @@ size_t bsearch_insertion(const void *key, const void *base, size_t nel,
   return last - (uintx *)base;
 }
 
+uint16_t bits_fit_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
+  return 1 + ((uint16_t)lg(alt_inner_bic(n, k, d)));
+}
+
 bool bic_geq_2_pow_m(const uint16_t m, const uint16_t n, const uint16_t k,
                      const uint16_t d) {
-  return (bool)(inner_bic_with_sums(n, k, d, NULL, inner_bin) >> m);
+  return (bool)(alt_inner_bic(n, k, d) >> m);
 }
 
 static void linear_search(uint16_t *rop, const uint16_t lo, const uint16_t hi,
@@ -124,4 +128,33 @@ void minver(const uint16_t m, uint16_t *n, const uint16_t k, uint16_t *d) {
     return;
   }
   linear_search(d, 0, *n, min_d, &c);
+}
+
+uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d) {
+  uint16_t len = bits_fit_bic(n, k, d) / sizeof(uint64_t);
+  len += (len == 0);
+
+  uint8_t *message = (uint8_t *)calloc(len, sizeof(uint8_t));
+  for (uint16_t i = 0; i < len; ++i) {
+    message[i] = random();
+  }
+  uintx rank = 0;
+
+#if defined(BITINT)
+  unsigned char *ptr = (unsigned char *)&rank;
+  for (uint16_t i = 0; i < len; ++i) {
+    ptr[len - 1 - i] = message[i];
+  }
+#elif defined(BOOST_FIX_INT) || defined(BOOST_ARB_INT)
+  boost::multiprecision::detail::import_bits_fast(rank, message, message + len);
+#elif defined(BOOST_MPZ_INT)
+  mpz_import(rank.backend().data(), len, 1, sizeof(uint8_t), 0, 0, message);
+#elif defined(BOOST_TOM_INT)
+  mp_err err =
+      mp_unpack(&rank.backend().data(), len, 1, sizeof(uint8_t), 0, 0, message);
+  (void)err;
+#endif
+
+  free(message);
+  return rank % alt_inner_bic(n, k, d);
 }

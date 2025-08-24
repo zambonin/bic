@@ -31,7 +31,7 @@ void colex_unrank_part_sums(uint32_t *rop, const uint16_t n, const uint16_t k,
 
   for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
     intx left = 0;
-    intx right = inner_bic_with_sums(it_n, i, d, prev_sum, bin);
+    intx right = inner_bic_with_sums(it_n, i, d, prev_sum);
 
     for (part = 0; rank >= (uintx)right; ++part) {
       left = right;

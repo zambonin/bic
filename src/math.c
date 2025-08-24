@@ -21,10 +21,6 @@ long double lg(const uintx u) {
 }
 #endif
 
-uint16_t bits_fit_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
-  return 1 + ((uint16_t)lg(inner_bic_with_sums(n, k, d, NULL, inner_bin)));
-}
-
 double asqrt(double x) {
   if (x < 0) {
     return -1.0;
@@ -44,7 +40,7 @@ double asqrt(double x) {
 }
 
 // from FXT: aux0/binomial.h
-uintx inner_bin(const uint16_t n, const uint16_t k, const uint16_t d) {
+uintx inner_bin(const uint32_t n, const uint32_t k, const uint16_t d) {
   (void)d;
   if (k > n) {
     return 0;
@@ -71,12 +67,32 @@ uintx inner_bin(const uint16_t n, const uint16_t k, const uint16_t d) {
   return b;
 }
 
-uintx bin(const uint16_t n, const uint16_t k, const uint16_t d) {
+uintx bin(const uint32_t n, const uint32_t k, const uint16_t d) {
   GET_CACHE_OR_CALC(BIN_CACHE, GET_CACHE_BIN(n, k), inner_bin);
 }
 
+uintx alt_inner_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
+  intx rop = 0;
+  intx inner = 0;
+  uintx left = 0;
+  uintx right = 0;
+
+  uint32_t i = 1 + ((n + k - 1) / (d + 1));
+  for (; i <= k; ++i) {
+    left = inner_bin(k, i, d);
+    right = inner_bin(i * (d + 1) - 1 - n, k - 1, d);
+    inner = left * right;
+    if ((k - i) & 1U) {
+      inner = -inner;
+    }
+    rop += inner;
+  }
+
+  return (uintx)rop;
+}
+
 uintx inner_bic_with_sums(const uint16_t n, const uint16_t k, const uint16_t d,
-                          intx *partial_sums, math_func bin_impl) {
+                          intx *partial_sums) {
   if (n == 0) {
     return 1;
   }
@@ -88,8 +104,8 @@ uintx inner_bic_with_sums(const uint16_t n, const uint16_t k, const uint16_t d,
 
   uint16_t j = min(k, n / (d + 1));
   for (uint16_t i = 0; i <= j; ++i) {
-    left = bin_impl(k, i, d);
-    right = bin_impl(n - (d + 1) * i + k - 1, k - 1, d);
+    left = bin(k, i, d);
+    right = bin(n - (d + 1) * i + k - 1, k - 1, d);
     inner = left * right;
     if (i & 1U) {
       inner = -inner;
@@ -105,7 +121,7 @@ uintx inner_bic_with_sums(const uint16_t n, const uint16_t k, const uint16_t d,
 }
 
 uintx inner_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
-  return inner_bic_with_sums(n, k, d, NULL, bin);
+  return inner_bic_with_sums(n, k, d, NULL);
 }
 
 uintx bic(const uint16_t n, const uint16_t k, const uint16_t d) {
@@ -166,33 +182,4 @@ uintx bic_acc(const uint16_t n, const uint16_t k, const uint16_t d,
   }
 
   return (uintx)rop;
-}
-
-uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d) {
-  uint16_t len = bits_fit_bic(n, k, d) / sizeof(uint64_t);
-  len += (len == 0);
-
-  uint8_t *message = (uint8_t *)calloc(len, sizeof(uint8_t));
-  for (uint16_t i = 0; i < len; ++i) {
-    message[i] = random();
-  }
-  uintx rank = 0;
-
-#if defined(BITINT)
-  unsigned char *ptr = (unsigned char *)&rank;
-  for (uint16_t i = 0; i < len; ++i) {
-    ptr[len - 1 - i] = message[i];
-  }
-#elif defined(BOOST_FIX_INT) || defined(BOOST_ARB_INT)
-  boost::multiprecision::detail::import_bits_fast(rank, message, message + len);
-#elif defined(BOOST_MPZ_INT)
-  mpz_import(rank.backend().data(), len, 1, sizeof(uint8_t), 0, 0, message);
-#elif defined(BOOST_TOM_INT)
-  mp_err err =
-      mp_unpack(&rank.backend().data(), len, 1, sizeof(uint8_t), 0, 0, message);
-  (void)err;
-#endif
-
-  free(message);
-  return rank % inner_bic(n, k, d);
 }

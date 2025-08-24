@@ -100,7 +100,7 @@ void gen_params_random(uint16_t *n, uint16_t *k, uint16_t *d) {
 
 void run_round_trip(order ord, const uint16_t n, const uint16_t k,
                     const uint16_t d) {
-  uintx all = inner_bic_with_sums(n, k, d, NULL, inner_bin);
+  uintx all = alt_inner_bic(n, k, d);
   if (all == 0) {
     return;
   }
