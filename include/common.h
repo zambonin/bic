@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+typedef struct bic_ctx_s bic_ctx_t;
+
 static const uint32_t NS_TO_SEC = 1000000000;
 
 #if defined(BOOST_FIX_INT)
@@ -41,15 +43,5 @@ static const double BIT_LENGTH = BITINT;
 #else
 #include <boost/multiprecision/cpp_bin_float.hpp>
 #endif
-
-typedef struct {
-  void (*unrank)(uint32_t *, const uint16_t, const uint16_t, const uint16_t,
-                 const uintx);
-  uintx (*rank)(const uint16_t, const uint16_t, const uint16_t,
-                const uint32_t *);
-} order;
-
-typedef void (*strategy_func)(const uint16_t, uint16_t *, const uint16_t,
-                              uint16_t *);
 
 #endif

@@ -25,9 +25,9 @@
 
 ┌─ Usage ────────────────────────────────────────────────────────────────────┐
 │                                                                            │
-│  Type `make $BACKEND $TARGET` to compile the code, where $BACKEND is one   │
-│  of {bitint,boost-fix,boost-arb,mpz,tom}, and $TARGET is the path to a     │
-│  file in the `bin` folder.                                                 │
+│  Type `make BACKEND=$INT $TARGET` to compile the code, where $INT is one   │
+│  of {bitint,boost-fix,boost-arb,mpz,tom}, and $TARGET is the basename of   │
+│  a file in the `bin` folder.                                               │
 │                                                                            │
 │  A simple CLI is given at `bin/cli.c` and, after compiled, can be executed │
 │  without flags to see the available options. It will unrank a random       │
@@ -38,8 +38,8 @@
 │  passed to the Makefile to experiment with specific parameters. For        │
 │  instance, the command                                                     │
 │                                                                            │
-│    make clean boost-fix TARGET=bin/cli.c ORDER=colex ALG=ps IT=1024        │
-│       CACHE=bin cli-256                                                    │
+│    make clean BACKEND=boost-fix ORDER=colex ALG=ps IT=1024 CACHE=bin       │
+│       cli-256                                                              │
 │                                                                            │
 │  will run tests for the unranking algorithm to the co-lexicographic order  │
 │  which reuses partial sums, using a wide Boost fixed-integer type for the  │
@@ -47,11 +47,10 @@
 │  1024 repetitions at the 256-bit security level.                           │
 │                                                                            │
 │  A program that tests every combination of flags is given at `bin/test.c`. │
-│  Type `make $BACKEND TARGET=bin/test.c test` to execute a standard test    │
-│  suite.                                                                    │
+│  Type `make BACKEND=$INT run-tests` to execute a standard test suite.      │
 │                                                                            │
-│  Type `make TARGET=bin/test.c leak` to assert that the code is free of     │
-│  memory leaks via Valgrind.                                                │
+│  Type `make BACKEND=$INT leak` to assert that the code is free of memory   │
+│  leaks via Valgrind.                                                       │
 │                                                                            │
 └────────────────────────────────────────────────────────────────────────────┘
 

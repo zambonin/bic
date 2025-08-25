@@ -3,12 +3,8 @@
 #include <string.h>
 #include <time.h>
 
-#include "cache.h"
-#include "colex.h"
-#include "gray.h"
-#include "math.h"
-#include "rbo.h"
-#include "utils.h"
+#include "api.h"
+#include "extra.h"
 
 #define INVALID_PARAM                                                          \
   if (fprintf(stderr, "Invalid parameter.\n")) {                               \
@@ -86,20 +82,9 @@ static const char *help_text =
     "  -r, --randomness=<uint32_t>\n"
     "         Set the seed for the random number generator.\n";
 
-void pprint(const uint16_t n, const uint16_t k, const uint16_t d,
-            const uint32_t it, const long double utime,
-            const long double ucycles, const long double rtime,
-            const long double rcycles) {
-  printf("n = %5d, k = %5d, d = %5d, i = %5u, m = %10.4Lf, b = %5f, c = %2u, "
-         "unrank avg = %14.2Lf ns, %14.2Lf cyc., "
-         "rank avg = %14.2Lf ns, %14.2Lf cyc.\n",
-         n, k, d, it, bits_fit_bic(n, k, d), BIT_LENGTH, cache_type, utime / it,
-         ucycles / it, rtime / it, rcycles / it);
-}
-
 int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
-                   uint16_t *d, uint32_t *iterations, order *ord, uint16_t *m,
-                   strategy_func *strategy, uint32_t *seed) {
+                   uint16_t *d, uint32_t *iterations, uint16_t *m,
+                   uint32_t *seed, bic_ctx_t *ctx) {
   for (;;) {
     int c = getopt_long(argc, argv, "n:k:d:o:a:i:c:m:s:r:", long_options, NULL);
     if (c == -1) {
@@ -117,57 +102,25 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
       *d = strtol(optarg, NULL, 0);
       break;
     case 'o':
-      if (strcmp(optarg, "colex") == 0) {
-        *ord = colex;
-      } else if (strcmp(optarg, "gray") == 0) {
-        *ord = gray;
-      } else if (strcmp(optarg, "rbo") == 0) {
-        *ord = rbo;
-      } else
+      if (bic_ctx_set_order_by_name(ctx, optarg))
         INVALID_PARAM;
       break;
     case 'a':
-      if (strcmp(optarg, "default") == 0) {
-        (void)optarg;
-      } else if ((*ord).rank != colex_rank) {
-        INVALID_PARAM;
-      } else if (strcmp(optarg, "al") == 0) {
-        (*ord).unrank = colex_unrank_acc_linear;
-      } else if (strcmp(optarg, "ab") == 0) {
-        (*ord).unrank = colex_unrank_acc_bisect;
-      } else if (strcmp(optarg, "ps") == 0) {
-        (*ord).unrank = colex_unrank_part_sums;
-      } else if (strcmp(optarg, "ad") == 0) {
-        (*ord).unrank = colex_unrank_acc_direct;
-      } else
+      if (bic_ctx_set_unrank_alg_by_name(ctx, optarg))
         INVALID_PARAM;
       break;
     case 'i':
       *iterations = strtol(optarg, NULL, 0);
       break;
     case 'c':
-      if (strcmp(optarg, "none") == 0) {
-        cache_type = NO_CACHE;
-      } else if (strcmp(optarg, "bin") == 0) {
-        cache_type = BIN_CACHE;
-      } else if (strcmp(optarg, "comb") == 0) {
-        cache_type = COMB_CACHE;
-      } else if (strcmp(optarg, "acc") == 0) {
-        cache_type = ACC_COMB_CACHE;
-      } else if (strcmp(optarg, "scomb") == 0) {
-        cache_type = SMALL_COMB_CACHE;
-      } else
+      if (bic_ctx_set_cache_by_name(ctx, optarg))
         INVALID_PARAM;
       break;
     case 'm':
       *m = strtol(optarg, NULL, 0);
       break;
     case 's':
-      if (strcmp(optarg, "gen") == 0) {
-        *strategy = mingen;
-      } else if (strcmp(optarg, "ver") == 0) {
-        *strategy = minver;
-      } else
+      if (bic_ctx_set_strategy_by_name(ctx, optarg))
         INVALID_PARAM;
       break;
     case 'r':
@@ -179,7 +132,7 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
   }
 
   if (*m != 0 && *k != 0 && *n == 0 && *d == 0) {
-    (*strategy)(*m, n, *k, d);
+    bic_run_strategy(ctx, *m, n, *k, d);
   } else if (*n == 0 || *k == 0 || *d == 0) {
     if (fprintf(stderr, help_text, argv[0])) {
       return 1;
@@ -197,18 +150,17 @@ int32_t main(int32_t argc, char **argv) {
   uint16_t d = 0;
   uint16_t m = 0;
   uint32_t iterations = 1;
-  uint32_t seed = time(NULL);
-  order ord = colex;
-  strategy_func strategy = mingen;
+  uint32_t seed = (uint32_t)time(NULL);
 
-  if (parse_args(argc, argv, &n, &k, &d, &iterations, &ord, &m, &strategy,
-                 &seed) > 0) {
+  bic_ctx_t *ctx = bic_ctx_init();
+
+  if (parse_args(argc, argv, &n, &k, &d, &iterations, &m, &seed, ctx) > 0) {
     return 1;
   }
 
   srandom(seed);
 
-  build_caches(n, k, d);
+  bic_precompute(ctx, n, k, d);
 
   long double utime = 0;
   long double ucycles = 0;
@@ -216,27 +168,13 @@ int32_t main(int32_t argc, char **argv) {
   long double rtime = 0;
   long double rcycles = 0;
 
-  uint32_t *comp = (uint32_t *)malloc(k * sizeof(uint32_t));
+  bic_run_round_trips(ctx, n, k, d, iterations, &utime, &ucycles, &rtime,
+                      &rcycles);
 
-  for (uint32_t it = 0; it < iterations; ++it) {
-    memset(comp, 0, k * sizeof(uint32_t));
+  bic_print_config(ctx, n, k, d);
+  bic_print_perf_stats(iterations, utime, ucycles, rtime, rcycles);
 
-    const uintx r = random_rank(n, k, d);
-
-    PERF(utime, ucycles, (*ord.unrank)(comp, n, k, d, r), unrank);
-
-    PERF(rtime, rcycles, const uintx rr = (*ord.rank)(n, k, d, comp), rank);
-
-    assert(r == rr);
-
-    check_valid_bounded_composition(comp, n, k, d);
-  }
-
-  pprint(n, k, d, iterations, utime, ucycles, rtime, rcycles);
-
-  free_caches();
-
-  free(comp);
+  bic_ctx_destroy(ctx);
 
   return 0;
 }
