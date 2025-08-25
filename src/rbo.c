@@ -1,9 +1,11 @@
 #include "rbo.h"
 #include "math.h"
-#include "utils.h"
 
-void inner_rbo_unrank(uint32_t *rop, const uint16_t n, const uint16_t k,
-                      const uint16_t d, const uintx r, const uint16_t start) {
+#include "types.h"
+
+void inner_rbo_unrank(const bic_ctx_t *ctx, uint32_t *rop, const uint16_t n,
+                      const uint16_t k, const uint16_t d, const uintx r,
+                      const uint16_t start) {
   uintx rank = r;
 
   if (k == 1) {
@@ -20,8 +22,8 @@ void inner_rbo_unrank(uint32_t *rop, const uint16_t n, const uint16_t k,
 
   for (uintx count = 0; leftSum <= min(n, left * d); ++leftSum, rank -= count) {
     rightSum = n - leftSum;
-    rightPoints = bic(rightSum, right, d);
-    count = bic(leftSum, left, d) * rightPoints;
+    rightPoints = ctx->comp(ctx, rightSum, right, d);
+    count = ctx->comp(ctx, leftSum, left, d) * rightPoints;
     if (rank < count) {
       break;
     }
@@ -30,17 +32,17 @@ void inner_rbo_unrank(uint32_t *rop, const uint16_t n, const uint16_t k,
   uintx leftRank = rank / rightPoints;
   uintx rightRank = rank % rightPoints;
 
-  inner_rbo_unrank(rop, leftSum, left, d, leftRank, start);
-  inner_rbo_unrank(rop, rightSum, right, d, rightRank, start + left);
+  inner_rbo_unrank(ctx, rop, leftSum, left, d, leftRank, start);
+  inner_rbo_unrank(ctx, rop, rightSum, right, d, rightRank, start + left);
 }
 
-void rbo_unrank(uint32_t *rop, const uint16_t n, const uint16_t k,
-                const uint16_t d, const uintx r) {
-  inner_rbo_unrank(rop, n, k, d, r, 0);
+void rbo_unrank(const bic_ctx_t *ctx, uint32_t *rop, const uint16_t n,
+                const uint16_t k, const uint16_t d, const uintx r) {
+  inner_rbo_unrank(ctx, rop, n, k, d, r, 0);
 }
 
-uintx rbo_rank(const uint16_t n, const uint16_t k, const uint16_t d,
-               const uint32_t *comb) {
+uintx rbo_rank(const bic_ctx_t *ctx, const uint16_t n, const uint16_t k,
+               const uint16_t d, const uint32_t *comb) {
   if (k == 1) {
     return 0;
   }
@@ -62,11 +64,12 @@ uintx rbo_rank(const uint16_t n, const uint16_t k, const uint16_t d,
 
   uintx case3 = 0;
   for (uint16_t s = 0; s < leftSum; ++s) {
-    case3 += bic(s, left, d) * bic(n - s, right, d);
+    case3 += ctx->comp(ctx, s, left, d) * ctx->comp(ctx, n - s, right, d);
   }
 
-  uintx case5 = rbo_rank(leftSum, left, d, xl) * bic(rightSum, right, d);
-  uintx case7 = rbo_rank(rightSum, right, d, xr);
+  uintx case5 =
+      rbo_rank(ctx, leftSum, left, d, xl) * ctx->comp(ctx, rightSum, right, d);
+  uintx case7 = rbo_rank(ctx, rightSum, right, d, xr);
 
   return case3 + case5 + case7;
 }

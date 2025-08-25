@@ -2,3 +2,4 @@ bin/cli
 bin/test
 *.png
 *.o
+libbic.a
