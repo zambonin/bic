@@ -55,6 +55,7 @@ static const order_cfg_t ORDERS[] = {
 
 static const cache_cfg_t CACHES[] = {{"none", NO_CACHE},
                                      {"bin", BIN_CACHE},
+                                     {"rbo", RBO_COMB_CACHE},
                                      {"comb", COMB_CACHE},
                                      {"scomb", SMALL_COMB_CACHE},
                                      {"acc", ACC_COMB_CACHE}};
@@ -147,6 +148,10 @@ void run_suite(uint32_t iterations) {
 
       for (size_t c = 0; c < num_caches; ++c) {
         cache_type = CACHES[c].strategy;
+
+        if (cache_type == RBO_COMB_CACHE && i != num_orders - 1) {
+          continue;
+        }
 
         for (size_t s = 0; s < num_strats; ++s) {
           strategy_cfg_t strat_cfg = STRATEGIES[s];

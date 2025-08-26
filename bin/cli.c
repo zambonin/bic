@@ -150,6 +150,8 @@ int32_t parse_args(int32_t argc, char **argv, uint16_t *n, uint16_t *k,
         cache_type = NO_CACHE;
       } else if (strcmp(optarg, "bin") == 0) {
         cache_type = BIN_CACHE;
+      } else if (strcmp(optarg, "rbo") == 0) {
+        cache_type = RBO_COMB_CACHE;
       } else if (strcmp(optarg, "comb") == 0) {
         cache_type = COMB_CACHE;
       } else if (strcmp(optarg, "acc") == 0) {
