@@ -5,6 +5,10 @@ uint32_t min(const uint32_t a, const uint32_t b) { return (a < b) ? a : b; }
 
 int32_t max(const int32_t a, const int32_t b) { return (a > b) ? a : b; }
 
+long double dmax(const long double a, const long double b) {
+  return (a > b) ? a : b;
+}
+
 #if defined(BITINT)
 long double lg(const uintx u) {
   // actually a truncated logarithm
@@ -157,4 +161,136 @@ uintx compute_dir(const bic_ctx_t *ctx, const uint16_t n, const uint16_t k,
   }
 
   return (uintx)rop;
+}
+
+uintx scomb(const uint32_t n, const uint32_t k) {
+  return compute_bin(NULL, n, k);
+}
+
+uintx power(uintx base, int exp) {
+  uintx res = 1;
+  for (int i = 0; i < exp; ++i) {
+    res *= base;
+  }
+  return res;
+}
+
+uintx W(int s, int c, int y, int l) {
+  if (s < 0 || c < 0 || y < 0) {
+    return 0;
+  }
+  if (s == 0) {
+    return scomb(y + 1, c + 1) - scomb(y - l, c + 1);
+  }
+  return ((uintx)c * W(s - 1, c, y, l)) +
+         ((uintx)(c + 1) * W(s - 1, c + 1, y, l));
+}
+
+uintx S_p(uint32_t n, uint32_t k, uint32_t d, uint32_t l, uint32_t p) {
+  if (k == 0) {
+    return (n == 0 && l > 0) ? 1 : 0;
+  }
+
+  uintx total_sum = 0;
+  uint32_t j = (d > 0) ? min(k, n / (d + 1)) : k;
+
+  for (uint32_t i = 0; i <= j; ++i) {
+    uintx u_i = (uintx)(d + 1) * i - k + 1;
+    uintx inner = 0;
+    for (uint32_t s = 0; s <= p; ++s) {
+      inner += scomb(p, s) * power(u_i, p - s) * W(s, k - 1, n - u_i, l);
+    }
+
+    uintx term = scomb(k, i) * inner;
+    if (i % 2 != 0) {
+      total_sum -= term;
+    } else {
+      total_sum += term;
+    }
+  }
+
+  return total_sum;
+}
+
+uintx _S0(uint32_t n, uint32_t k, uint32_t d, uint32_t l) {
+  return S_p(n, k, d, l, 0);
+}
+
+uintx _S1(uint32_t n, uint32_t k, uint32_t d, uint32_t l) {
+  return S_p(n, k, d, l, 1);
+}
+
+uintx _S2(uint32_t n, uint32_t k, uint32_t d, uint32_t l) {
+  return S_p(n, k, d, l, 2);
+}
+
+double exp_total_sum(uint32_t n, uint32_t k, uint32_t d, uint32_t l) {
+  if (l == 0) {
+    return (double)n;
+  }
+  uintx S0 = _S0(n, k, d, l);
+  if (S0 == 0) {
+    return 0.0;
+  }
+  return (double)_S1(n, k, d, l) / (double)S0;
+}
+
+double var_total_sum(uint32_t n, uint32_t k, uint32_t d, uint32_t l) {
+  if (l == 0) {
+    return 0.0;
+  }
+  uintx S0 = _S0(n, k, d, l);
+  if (S0 == 0) {
+    return 0.0;
+  }
+  double exp_val = exp_total_sum(n, k, d, l);
+  return dmax(0.0,
+              ((double)_S2(n, k, d, l) / (double)S0) - (exp_val * exp_val));
+}
+
+double var_single_part(uint32_t n, uint32_t k, uint32_t d, uint32_t l) {
+  if (k == 0) {
+    return 0.0;
+  }
+  uintx S0 = _S0(n, k, d, l);
+  if (S0 == 0) {
+    return 0.0;
+  }
+
+  double lhs = 0.0;
+  for (uint32_t y = 0; y <= min(n, d); ++y) {
+    lhs += ((double)y * y) * (double)S_p(n - y, k - 1, d, l, 0);
+  }
+  lhs /= (double)S0;
+
+  double exp_val = exp_total_sum(n, k, d, l) / k;
+  double rhs = exp_val * exp_val;
+
+  return dmax(0.0, lhs - rhs);
+}
+
+double exp_part_sum(uint32_t n, uint32_t k, uint32_t d, uint32_t j,
+                    uint32_t l) {
+  if (k <= 0) {
+    return 0.0;
+  }
+  return (double)j * exp_total_sum(n, k, d, l) / k;
+}
+
+double var_part_sum(uint32_t n, uint32_t k, uint32_t d, uint32_t j,
+                    uint32_t l) {
+  if (k <= 1) {
+    return var_total_sum(n, k, d, l);
+  }
+
+  double lhs = ((double)j * (k - j) / (k - 1)) * var_single_part(n, k, d, l);
+  double rhs =
+      ((double)j * (j - 1) / ((double)k * (k - 1))) * var_total_sum(n, k, d, l);
+
+  return dmax(0.0, lhs + rhs);
+}
+
+double stddev_part_sum(uint32_t n, uint32_t k, uint32_t d, uint32_t j,
+                       uint32_t l) {
+  return asqrt(var_part_sum(n, k, d, j, l));
 }

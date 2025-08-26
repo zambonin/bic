@@ -31,4 +31,9 @@ void compute_acc(uintx *rop, const bic_ctx_t *ctx, const uint16_t n,
 uintx compute_dir(const bic_ctx_t *ctx, const uint16_t n, const uint16_t k,
                   const uint16_t d, const uint16_t l);
 
+double exp_part_sum(uint32_t n, uint32_t k, uint32_t d, uint32_t j, uint32_t l);
+
+double stddev_part_sum(uint32_t n, uint32_t k, uint32_t d, uint32_t j,
+                       uint32_t l);
+
 #endif
