@@ -68,7 +68,7 @@ uint8_t bic_ctx_set_generic_by_name(bic_ctx_t *ctx, const char *name,
 }
 
 uint8_t bic_ctx_set_order(bic_ctx_t *ctx, uint8_t order) {
-  switch (ctx->order) {
+  switch (order) {
   case BIC_ORDER_COLEX:
     ctx->unrank = colex_unrank;
     ctx->rank = colex_rank;
@@ -94,7 +94,7 @@ uint8_t bic_ctx_set_order_by_name(bic_ctx_t *ctx, const char *name) {
 }
 
 uint8_t bic_ctx_set_unrank_alg(bic_ctx_t *ctx, uint8_t alg) {
-  if (ctx->order != BIC_ORDER_COLEX) {
+  if (ctx->order != BIC_ORDER_COLEX && alg != BIC_ALG_DEFAULT) {
     return 1;
   }
 

@@ -56,8 +56,9 @@ uint8_t bin_build_cache(bic_ctx_t *ctx, const uint16_t n, const uint16_t k) {
       if (col == 0 || col == row) {
         *get_cache_bin(ctx, row, col) = 1;
       } else {
-        *get_cache_bin(ctx, row, col) = (uintx)*get_cache_bin(ctx, row - 1, col - 1) +
-                                        (uintx)*get_cache_bin(ctx, row - 1, col);
+        *get_cache_bin(ctx, row, col) =
+            (uintx)*get_cache_bin(ctx, row - 1, col - 1) +
+            (uintx)*get_cache_bin(ctx, row - 1, col);
       }
     }
   }
@@ -120,13 +121,12 @@ uint8_t scomb_build_cache(bic_ctx_t *ctx, const uint16_t n, const uint16_t k,
     return 1;
   }
 
-  double variance = d * (d + 2) / 12;
-  uint8_t level = 4;
+  const uint8_t level = 4;
 
   for (uint16_t col = 0; col < c->cols; ++col) {
     uint16_t j = col + 1;
-    double mean = j * n / k;
-    double stddev = asqrt(j * variance * (k - j) / k);
+    double mean = exp_part_sum(n, k, d, j, 0);
+    double stddev = stddev_part_sum(n, k, d, j, 0);
     uint16_t left = max(mean - level * stddev, 0);
     uint16_t right = min(mean + level * stddev, n);
 
