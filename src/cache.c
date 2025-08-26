@@ -25,27 +25,40 @@ uint8_t generic_setup_cache(cache_t *cache, const uint32_t rows,
   return cache->data == NULL;
 }
 
-#define GET_CACHE_BIN(ctx, row, col)                                           \
-  (*(uintx *)cache_get_element((ctx)->bin_cache, row, col))
+uintx *get_cache_bin(const bic_ctx_t *ctx, const uint16_t n, const uint16_t k) {
+  return &((uintx **)ctx->bin_cache->data)[k][n - k];
+}
 
 uintx bin_from_cache(const bic_ctx_t *ctx, const uint32_t n, const uint32_t k) {
-  return (*(uintx *)cache_get_element(ctx->bin_cache, n, k));
+  if (k > n) {
+    return 0;
+  }
+  return *get_cache_bin(ctx, n, k);
 }
 
 uint8_t bin_build_cache(bic_ctx_t *ctx, const uint16_t n, const uint16_t k) {
   ctx->bin_cache = (cache_t *)malloc(sizeof(cache_t));
   cache_t *c = ctx->bin_cache;
-  if (generic_setup_cache(c, n + k + 1, k, sizeof(uintx))) {
+  if (generic_setup_cache(c, 1, k, sizeof(uintx *))) {
     return 1;
   }
 
-  GET_CACHE_BIN(ctx, 0, 0) = 1;
-  for (uint32_t row = 1; row < c->rows; ++row) {
-    GET_CACHE_BIN(ctx, row, 0) = 1;
-    for (uint16_t col = 1; col <= min(row, c->cols - 1); ++col) {
-      GET_CACHE_BIN(ctx, row, col) =
-          (uintx)GET_CACHE_BIN(ctx, row - 1, col - 1) +
-          (uintx)GET_CACHE_BIN(ctx, row - 1, col);
+  const uint16_t max_row = n + c->cols;
+  for (uint16_t col = 0; col < c->cols; ++col) {
+    uint16_t length = max_row - col;
+    uintx *part = (uintx *)calloc(length, sizeof(uintx));
+    ((uintx **)c->data)[col] = part;
+    c->total_size += length * sizeof(uintx);
+  }
+
+  for (uint16_t row = 0; row < max_row; ++row) {
+    for (uint16_t col = 0; col < min(row + 1, c->cols); ++col) {
+      if (col == 0 || col == row) {
+        *get_cache_bin(ctx, row, col) = 1;
+      } else {
+        *get_cache_bin(ctx, row, col) = (uintx)*get_cache_bin(ctx, row - 1, col - 1) +
+                                        (uintx)*get_cache_bin(ctx, row - 1, col);
+      }
     }
   }
 
@@ -187,6 +200,9 @@ void bin_free_cache(bic_ctx_t *ctx) {
     return;
   }
 
+  for (uint16_t j = 0; j < ctx->bin_cache->cols; ++j) {
+    free(get_cache_bin(ctx, j, j));
+  }
   free(ctx->bin_cache->data);
   free(ctx->bin_cache);
   ctx->bin_cache = NULL;
