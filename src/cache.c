@@ -163,52 +163,77 @@ uint8_t scomb_build_cache(const uint16_t n, const uint16_t k, const uint16_t d,
   return 0;
 }
 
-uintx *acc_cache_get_value(const uint16_t n, const uint16_t k, const uint16_t d,
-                           const uint16_t l, const bic_ctx_t ctx) {
-  (void)d;
+uintx *acc_cache_get_value(const uint16_t n, const uint16_t k,
+                           const bic_ctx_t ctx) {
   const cache_t *c = ctx->acc_cache;
-  const size_t index = (n * c->cols * c->depth) + (k * c->depth) + l;
-  return &(c->data[index]);
+  const acc_cache_meta_t *meta = (const acc_cache_meta_t *)c->meta;
+  const acc_cache_meta_t m = meta[n * c->cols + k];
+  return &(c->data[m.offset]);
 }
 
 uint16_t acc_from_cache(uintx *rop, const uint16_t n, const uint16_t k,
                         const uint16_t d, const bic_ctx_t ctx) {
+  (void)d;
   const cache_t *c = ctx->acc_cache;
   const acc_cache_meta_t *meta = (acc_cache_meta_t *)c->meta;
-  const uintx *source = acc_cache_get_value(n, k, d, 0, ctx);
-  for (uint32_t i = 0; i < c->depth; ++i) {
+  const uintx *source = acc_cache_get_value(n, k, ctx);
+  const acc_cache_meta_t m = meta[n * c->cols + k];
+  for (uint32_t i = 0; i < m.length; ++i) {
     rop[i] = source[i];
   }
-  return meta->lengths[n * c->cols + k];
+  return m.length;
 }
 
 uintx dir_from_cache(const uint16_t n, const uint16_t k, const uint16_t d,
                      const uint16_t l, const bic_ctx_t ctx) {
-  return *acc_cache_get_value(n, k, d, l, ctx);
+  (void)d;
+  const uintx *slice = acc_cache_get_value(n, k, ctx);
+  return slice[l];
 }
 
 uint8_t acc_build_cache(const uint16_t n, const uint16_t k, const uint16_t d,
                         bic_ctx_t ctx) {
   ctx->acc_cache = (cache_t *)malloc(sizeof(cache_t));
-  acc_cache_meta_t *meta = (acc_cache_meta_t *)malloc(sizeof(acc_cache_meta_t));
-
   cache_t *c = ctx->acc_cache;
   c->rows = n + 1;
   c->cols = k;
   c->depth = d + 2;
+  c->length = 0;
+
+  acc_cache_meta_t *meta =
+      (acc_cache_meta_t *)calloc(c->rows * c->cols, sizeof(acc_cache_meta_t));
   c->meta = meta;
 
-  meta->lengths = (uint16_t *)malloc(c->rows * c->cols * sizeof(uint16_t));
-  c->data = uintx_alloc(c->rows * c->cols * c->depth);
+  for (uint16_t row = 0; row < c->rows; ++row) {
+    for (uint16_t col = 0; col < c->cols; ++col) {
+      const size_t i = row * c->cols + col;
+      const uint16_t len = min(row, d) + 2;
+      meta[i].length = len;
+      c->length += len;
+    }
+  }
+
+  c->data = uintx_alloc(c->length);
   if (c->data == NULL) {
     return 1;
   }
 
+  uint32_t offset = 0;
   for (uint16_t row = 0; row < c->rows; ++row) {
     for (uint16_t col = 0; col < c->cols; ++col) {
-      uintx *dest = acc_cache_get_value(row, col, d, 0, ctx);
-      uint16_t len = compute_acc(dest, row, col, d, ctx);
-      meta->lengths[row * c->cols + col] = len;
+      const size_t i = row * c->cols + col;
+      const uint16_t len = meta[i].length;
+      meta[i].offset = offset;
+
+      uintx *slice = c->data + offset;
+      for (uint16_t l = 1; l < len; ++l) {
+        uintx prev = 0;
+        if (row >= l - 1) {
+          prev = bic_from_cache_comb(row - (l - 1), col, d, ctx);
+        }
+        slice[l] = slice[l - 1] + prev;
+      }
+      offset += len;
     }
   }
 
@@ -263,9 +288,7 @@ void acc_free_cache(bic_ctx_t ctx) {
     return;
   }
 
-  acc_cache_meta_t *meta = (acc_cache_meta_t *)ctx->acc_cache->meta;
-  free(meta->lengths);
-  free(meta);
+  free(ctx->acc_cache->meta);
   uintx_free(ctx->acc_cache->data);
   free(ctx->acc_cache);
   ctx->acc_cache = NULL;

@@ -64,7 +64,7 @@ void colex_unrank_acc_linear(uint32_t *rop, const uint16_t n, const uint16_t k,
   uintx rank = r;
   uint16_t part = 0;
   uintx count = 0;
-  uintx *sums = uintx_alloc(d + 3);
+  uintx *sums = uintx_alloc(d + 2);
 
   for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
     (void)ctx->acc(sums, it_n, i, d, ctx);
@@ -83,7 +83,7 @@ void colex_unrank_acc_bisect(uint32_t *rop, const uint16_t n, const uint16_t k,
   uint16_t it_n = n;
   uintx rank = r;
   uint16_t part = 0;
-  uintx *sums = uintx_alloc(d + 3);
+  uintx *sums = uintx_alloc(d + 2);
 
   for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
     size_t length = ctx->acc(sums, it_n, i, d, ctx);

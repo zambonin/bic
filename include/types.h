@@ -57,7 +57,8 @@ typedef struct {
 } scomb_cache_meta_t;
 
 typedef struct {
-  uint16_t *lengths;
+  uint16_t length;
+  size_t offset;
 } acc_cache_meta_t;
 
 typedef void (*bic_unrank_func_t)(uint32_t *rop, const uint16_t n,
