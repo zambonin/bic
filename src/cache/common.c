@@ -6,51 +6,6 @@ static const bic_cache_t dependencies[BIC_CACHE_LENGTH] = {
     BIC_CACHE_BIN,  BIC_CACHE_COMB,
 };
 
-uintx bin_from_cache(const uint32_t n, const uint32_t k, const bic_ctx_t ctx) {
-  if (k > n) {
-    return 0;
-  }
-
-  const cache_t *c = ctx->bin_cache;
-  const size_t index = n * c->cols + k;
-
-  return c->data[index];
-}
-
-uint8_t bin_build_cache(const uint32_t n, const uint32_t k, bic_ctx_t ctx) {
-  ctx->bin_cache = (cache_t *)malloc(sizeof(cache_t));
-
-  cache_t *c = ctx->bin_cache;
-  c->rows = n + k + 1;
-  c->cols = k + 1;
-  c->depth = 1;
-  c->length = c->rows * c->cols;
-  c->meta = NULL;
-
-  c->data = uintx_alloc(c->length);
-  if (c->data == NULL) {
-    return 1;
-  }
-
-  for (uint32_t row = 0; row < c->rows; ++row) {
-    for (uint32_t col = 0; col < c->cols; ++col) {
-      const size_t index = row * c->cols + col;
-      if (col > row) {
-        c->data[index] = 0;
-      } else if (col == 0 || col == row) {
-        c->data[index] = 1;
-      } else {
-        c->data[index] = bin_from_cache(row - 1, col - 1, ctx) +
-                         bin_from_cache(row - 1, col, ctx);
-      }
-    }
-  }
-
-  ctx->bin = bin_from_cache;
-
-  return 0;
-}
-
 uintx *comb_cache_get_value(const uint32_t n, const uint32_t k,
                             const bic_ctx_t ctx) {
   const cache_t *c = ctx->comb_cache;
@@ -202,18 +157,6 @@ uint8_t acc_build_cache(const uint32_t n, const uint32_t k, const uint32_t d,
   ctx->dir = dir_from_cache;
 
   return 0;
-}
-
-void bin_free_cache(bic_ctx_t ctx) {
-  if (!ctx || !ctx->bin_cache) {
-    return;
-  }
-
-  uintx_free(ctx->bin_cache->data);
-  free(ctx->bin_cache);
-  ctx->bin_cache = NULL;
-
-  ctx->bin = compute_bin;
 }
 
 void comb_free_cache(bic_ctx_t ctx) {

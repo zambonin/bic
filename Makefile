@@ -36,5 +36,5 @@ $(LIBEXTRA): $(OBJ) src/extra.o
 $(TARGETS): %: %.o $(LIBEXTRA)
 
 clean:
-	$(RM) $(OUT) $(wildcard src/*.o src/order/*.o) $(wildcard bin/*.o) \
+	$(RM) $(OUT) $(wildcard src/*.o src/order/*.o src/cache/*.o) $(wildcard bin/*.o) \
 		$(LIB) $(LIBEXTRA) $(TARGETS)

@@ -35,6 +35,12 @@ typedef enum {
   BIC_STRATEGY_LENGTH,
 } bic_strategy_t;
 
+typedef struct {
+  size_t offset;
+  uint32_t length;
+  uint32_t base;
+} bic_meta_t;
+
 typedef struct cache_s {
   uintx *data;
   uint32_t rows;
