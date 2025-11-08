@@ -1,16 +1,17 @@
 #include "gray.h"
 #include "math.h"
-#include "utils.h"
+
+#include "types.h"
 
 void gray_unrank(uint32_t *rop, const uint16_t n, const uint16_t k,
-                 const uint16_t d, const uintx r) {
+                 const uint16_t d, const uintx r, const bic_ctx_t ctx) {
   uint16_t it_n = n;
   uintx rank = r;
   uint16_t part = 0;
   uintx count = 0;
 
   for (uint16_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
-    for (part = 0; count = bic(it_n - part, i, d), rank >= count;
+    for (part = 0; count = ctx->comp(it_n - part, i, d, ctx), rank >= count;
          ++part, rank -= count) {
     }
     if (part & 1U) {
@@ -22,7 +23,7 @@ void gray_unrank(uint32_t *rop, const uint16_t n, const uint16_t k,
 }
 
 uintx gray_rank(const uint16_t n, const uint16_t k, const uint16_t d,
-                const uint32_t *comb) {
+                const uint32_t *comb, const bic_ctx_t ctx) {
   uint16_t it_n = n;
   uintx rank = 0;
   uint16_t part = 0;
@@ -31,11 +32,11 @@ uintx gray_rank(const uint16_t n, const uint16_t k, const uint16_t d,
        part = comb[i], parity = it_n & 1U, i > 0; --i, it_n -= part) {
     if (parity == p) {
       for (uint16_t j = 0; j < part; ++j) {
-        rank += bic(it_n - j, i, d);
+        rank += ctx->comp(it_n - j, i, d, ctx);
       }
     } else {
       for (uint16_t j = part + 1; j < min(it_n, d) + 1; ++j) {
-        rank += bic(it_n - j, i, d);
+        rank += ctx->comp(it_n - j, i, d, ctx);
       }
     }
   }

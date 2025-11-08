@@ -1,12 +1,10 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-static const uint32_t NS_TO_SEC = 1000000000;
+typedef struct bic_ctx_s *bic_ctx_t;
 
 #if defined(BOOST_FIX_INT)
 #include <boost/multiprecision/cpp_int.hpp>
@@ -42,16 +40,17 @@ static const double BIT_LENGTH = BITINT;
 #include <boost/multiprecision/cpp_bin_float.hpp>
 #endif
 
-typedef struct {
-  void (*unrank)(uint32_t *, const uint16_t, const uint16_t, const uint16_t,
-                 const uintx);
-  uintx (*rank)(const uint16_t, const uint16_t, const uint16_t,
-                const uint32_t *);
-} order;
-
-typedef void (*strategy_func)(const uint16_t, uint16_t *, const uint16_t,
-                              uint16_t *);
-
-typedef uintx (*math_func)(const uint16_t, const uint16_t, const uint16_t);
+#if defined(BOOST_FIX_INT) || defined(BOOST_ARB_INT) ||                        \
+    defined(BOOST_MPZ_INT) || defined(BOOST_TOM_INT)
+#define uintx_alloc(count) (new uintx[count])
+#define uintx_free(ptr) (delete[] ptr)
+#define intx_alloc(count) (new intx[count])
+#define intx_free(ptr) (delete[] ptr)
+#elif defined(BITINT)
+#define uintx_alloc(count) ((uintx *)calloc(count, sizeof(uintx)))
+#define uintx_free(ptr) (free(ptr))
+#define intx_alloc(count) ((intx *)calloc(count, sizeof(intx)))
+#define intx_free(ptr) (free(ptr))
+#endif
 
 #endif

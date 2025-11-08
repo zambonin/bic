@@ -1,0 +1,22 @@
+┌─ API examples ─────────────────────────────────────────────────────────────┐
+│                                                                            │
+│  To compile and link the programs against `libbic.a` given it is already   │
+│  compiled, type `make $TARGET`, where $TARGET is the path of a file below  │
+│  excluding the `.c` suffix. Of course, BACKEND and INTWIDTH must also be   │
+│  preserved from the original `libbic.a` compilation.                       │
+│                                                                            │
+│  Executing a program without passing any flags will show the available     │
+│  options.                                                                  │
+│                                                                            │
+│  * `bin/cli.c`: a simple CLI to test the available algorithms. It will     │
+│    unrank a random integer to a composition and rank it back, showing      │
+│    performance stats and other information.                                │
+│                                                                            │
+│  * `bin/test.c`: a test suite for combinations of API configurations,      │
+│    which generates random parameters and runs a single round trip of       │
+│    (un)ranking to assert that the library is working correctly. To run     │
+│    the program with a fixed seed, issue the command below.                 │
+│                                                                            │
+│      make BACKEND=$INT test                                                │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘

@@ -1,6 +1,9 @@
 #include "math.h"
 #include "cache.h"
-#include "utils.h"
+
+uint32_t min(const uint32_t a, const uint32_t b) { return (a < b) ? a : b; }
+
+int32_t max(const int32_t a, const int32_t b) { return (a > b) ? a : b; }
 
 #if defined(BITINT)
 long double lg(const uintx u) {
@@ -21,10 +24,6 @@ long double lg(const uintx u) {
 }
 #endif
 
-uint16_t bits_fit_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
-  return 1 + ((uint16_t)lg(inner_bic_with_sums(n, k, d, NULL, inner_bin)));
-}
-
 double asqrt(double x) {
   if (x < 0) {
     return -1.0;
@@ -43,9 +42,8 @@ double asqrt(double x) {
   return z;
 }
 
-// from FXT: aux0/binomial.h
-uintx inner_bin(const uint16_t n, const uint16_t k, const uint16_t d) {
-  (void)d;
+uintx compute_bin(const uint32_t n, const uint32_t k, const bic_ctx_t ctx) {
+  (void)ctx;
   if (k > n) {
     return 0;
   }
@@ -71,85 +69,82 @@ uintx inner_bin(const uint16_t n, const uint16_t k, const uint16_t d) {
   return b;
 }
 
-uintx bin(const uint16_t n, const uint16_t k, const uint16_t d) {
-  GET_CACHE_OR_CALC(BIN_CACHE, GET_CACHE_BIN(n, k), inner_bin);
-}
-
-uintx inner_bic_with_sums(const uint16_t n, const uint16_t k, const uint16_t d,
-                          intx *partial_sums, math_func bin_impl) {
+uintx compute_bic_no_cache(const uint16_t n, const uint16_t k,
+                           const uint16_t d) {
   if (n == 0) {
     return 1;
   }
 
   intx rop = 0;
-  intx inner = 0;
+  intx compute = 0;
   uintx left = 0;
   uintx right = 0;
 
   uint16_t j = min(k, n / (d + 1));
   for (uint16_t i = 0; i <= j; ++i) {
-    left = bin_impl(k, i, d);
-    right = bin_impl(n - (d + 1) * i + k - 1, k - 1, d);
-    inner = left * right;
+    left = compute_bin(k, i, NULL);
+    right = compute_bin(n - (d + 1) * i + k - 1, k - 1, NULL);
+    compute = left * right;
     if (i & 1U) {
-      inner = -inner;
+      compute = -compute;
     }
-    rop += inner;
+    rop += compute;
+  }
+
+  return (uintx)rop;
+}
+
+uintx compute_bic_with_sums(const uint16_t n, const uint16_t k,
+                            const uint16_t d, intx *partial_sums,
+                            const bic_ctx_t ctx) {
+  if (n == 0) {
+    return 1;
+  }
+
+  intx rop = 0;
+  intx compute = 0;
+  uintx left = 0;
+  uintx right = 0;
+
+  uint16_t j = min(k, n / (d + 1));
+  for (uint16_t i = 0; i <= j; ++i) {
+    left = ctx->bin(k, i, ctx);
+    right = ctx->bin(n - (d + 1) * i + k - 1, k - 1, ctx);
+    compute = left * right;
+    if (i & 1U) {
+      compute = -compute;
+    }
+    rop += compute;
 
     if (partial_sums != NULL) {
-      partial_sums[i] = inner;
+      partial_sums[i] = compute;
     }
   }
 
   return (uintx)rop;
 }
 
-uintx inner_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
-  return inner_bic_with_sums(n, k, d, NULL, bin);
+uintx compute_bic(const uint16_t n, const uint16_t k, const uint16_t d,
+                  const bic_ctx_t ctx) {
+  return compute_bic_with_sums(n, k, d, NULL, ctx);
 }
 
-uintx bic(const uint16_t n, const uint16_t k, const uint16_t d) {
-  if (cache_type == SMALL_COMB_CACHE) {
-    uintx *row = GET_CACHE_SCOMB(0, k - 1);
-    uint16_t left = (uint16_t)row[0];
-    uint16_t right = (uint16_t)row[1];
-
-    if (n < left || n > right) {
-      return inner_bic(n, k, d);
-    }
-    return row[n - left + 2];
-  }
-
-  GET_CACHE_OR_CALC(COMB_CACHE, GET_CACHE_COMB(n, k), inner_bic);
-}
-
-uintx *inner_acc(const uint16_t n, const uint16_t k, const uint16_t d) {
-  size_t length = d + 3;
-  size_t i = 0;
-  uintx *rop = (uintx *)calloc(length, sizeof(uintx));
-  acc_cache_t.total_size += length * sizeof(uintx);
+uint16_t compute_acc(uintx *rop, const uint16_t n, const uint16_t k,
+                     const uint16_t d, const bic_ctx_t ctx) {
+  uint16_t i = 0;
   uintx sum = 0;
 
   rop[0] = 0;
   for (; i <= min(n, d); ++i) {
-    sum += bic(n - i, k, d);
+    sum += ctx->comp(n - i, k, d, ctx);
     rop[i + 1] = sum;
   }
-  rop[length - 1] = i;
 
-  return rop;
+  return i;
 }
 
-uintx *acc(const uint16_t n, const uint16_t k, const uint16_t d) {
-  GET_CACHE_OR_CALC(ACC_COMB_CACHE, GET_CACHE_ACC(n, k), inner_acc);
-}
-
-uintx bic_acc(const uint16_t n, const uint16_t k, const uint16_t d,
-              const uint16_t l) {
-  if (cache_type == ACC_COMB_CACHE) {
-    return acc(n, k, d)[l];
-  }
-
+uintx compute_dir(const uint16_t n, const uint16_t k, const uint16_t d,
+                  const uint16_t l, const bic_ctx_t ctx) {
   uint16_t j = min(k, n / (d + 1));
   uint16_t u;
 
@@ -158,7 +153,8 @@ uintx bic_acc(const uint16_t n, const uint16_t k, const uint16_t d,
 
   for (uint16_t i = 0; i <= j; ++i) {
     u = n - (d + 1) * i + k;
-    tmp = bin(k, i, d) * (bin(u, k, d) - bin(max(0, u - l), k, d));
+    tmp = ctx->bin(k, i, ctx) *
+          (ctx->bin(u, k, ctx) - ctx->bin(max(0, u - l), k, ctx));
     if (i & 1U) {
       tmp = -tmp;
     }
@@ -166,33 +162,4 @@ uintx bic_acc(const uint16_t n, const uint16_t k, const uint16_t d,
   }
 
   return (uintx)rop;
-}
-
-uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d) {
-  uint16_t len = bits_fit_bic(n, k, d) / sizeof(uint64_t);
-  len += (len == 0);
-
-  uint8_t *message = (uint8_t *)calloc(len, sizeof(uint8_t));
-  for (uint16_t i = 0; i < len; ++i) {
-    message[i] = random();
-  }
-  uintx rank = 0;
-
-#if defined(BITINT)
-  unsigned char *ptr = (unsigned char *)&rank;
-  for (uint16_t i = 0; i < len; ++i) {
-    ptr[len - 1 - i] = message[i];
-  }
-#elif defined(BOOST_FIX_INT) || defined(BOOST_ARB_INT)
-  boost::multiprecision::detail::import_bits_fast(rank, message, message + len);
-#elif defined(BOOST_MPZ_INT)
-  mpz_import(rank.backend().data(), len, 1, sizeof(uint8_t), 0, 0, message);
-#elif defined(BOOST_TOM_INT)
-  mp_err err =
-      mp_unpack(&rank.backend().data(), len, 1, sizeof(uint8_t), 0, 0, message);
-  (void)err;
-#endif
-
-  free(message);
-  return rank % inner_bic(n, k, d);
 }
