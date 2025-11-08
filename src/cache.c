@@ -12,32 +12,39 @@ uintx bin_from_cache(const uint32_t n, const uint32_t k, const bic_ctx_t ctx) {
   }
 
   const cache_t *c = ctx->bin_cache;
-  const size_t index = n * c->cols + k;
+  const bin_cache_meta_t *meta = (bin_cache_meta_t *)c->meta;
+  const size_t index = meta->offsets[k] + (n - k);
 
   return c->data[index];
 }
 
 uint8_t bin_build_cache(const uint16_t n, const uint16_t k, bic_ctx_t ctx) {
   ctx->bin_cache = (cache_t *)malloc(sizeof(cache_t));
+  bin_cache_meta_t *meta = (bin_cache_meta_t *)malloc(sizeof(bin_cache_meta_t));
 
   cache_t *c = ctx->bin_cache;
-  c->rows = n + k + 1;
-  c->cols = k + 1;
+  c->rows = 1;
+  c->cols = k;
   c->depth = 1;
-  c->length = c->rows * c->cols;
-  c->meta = NULL;
+  c->length = 0;
+  c->meta = meta;
+
+  meta->max_row = n + c->cols;
+  meta->offsets = (size_t *)calloc(k, sizeof(size_t));
+  for (uint16_t col = 0; col < c->cols; ++col) {
+    meta->offsets[col] = c->length;
+    c->length += (meta->max_row - col);
+  }
 
   c->data = uintx_alloc(c->length);
   if (c->data == NULL) {
     return 1;
   }
 
-  for (uint16_t row = 0; row < c->rows; ++row) {
-    for (uint16_t col = 0; col < c->cols; ++col) {
-      const size_t index = row * c->cols + col;
-      if (col > row) {
-        c->data[index] = 0;
-      } else if (col == 0 || col == row) {
+  for (uint16_t row = 0; row < meta->max_row; ++row) {
+    for (uint16_t col = 0; col < min(row + 1, c->cols); ++col) {
+      const size_t index = meta->offsets[col] + (row - col);
+      if (col == 0 || col == row) {
         c->data[index] = 1;
       } else {
         c->data[index] = bin_from_cache(row - 1, col - 1, ctx) +
@@ -208,6 +215,9 @@ void bin_free_cache(bic_ctx_t ctx) {
     return;
   }
 
+  bin_cache_meta_t *meta = (bin_cache_meta_t *)ctx->bin_cache->meta;
+  free(meta->offsets);
+  free(meta);
   uintx_free(ctx->bin_cache->data);
   free(ctx->bin_cache);
   ctx->bin_cache = NULL;

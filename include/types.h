@@ -46,6 +46,11 @@ typedef struct cache_s {
 } cache_t;
 
 typedef struct {
+  uint16_t max_row;
+  size_t *offsets;
+} bin_cache_meta_t;
+
+typedef struct {
   uint16_t left;
   uint16_t right;
   size_t offset;
