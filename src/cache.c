@@ -118,14 +118,13 @@ uint8_t scomb_build_cache(const uint16_t n, const uint16_t k, const uint16_t d,
       (scomb_cache_meta_t *)calloc(c->cols, sizeof(scomb_cache_meta_t));
   c->meta = meta;
 
-  double variance = d * (d + 2) / 12;
   const uint8_t level = ctx->scomb_cache_stddev_level;
   for (uint16_t col = 0; col < c->cols; ++col) {
     uint16_t j = col + 1;
-    double mean = j * n / k;
-    double stddev = asqrt(j * variance * (k - j) / k);
-    meta[col].left = max((uint32_t)(mean - level * stddev) + 1, 0);
-    meta[col].right = min((uint32_t)(mean + level * stddev), n);
+    double mean = exp_part_sum(n, k, d, j, 0);
+    double stddev = stddev_part_sum(n, k, d, j, 0);
+    meta[col].left = max((int32_t)(mean - level * stddev), 0);
+    meta[col].right = min((int32_t)(mean + level * stddev), n);
     meta[col].offset = c->length;
     c->length += (meta[col].right - meta[col].left + 1);
   }

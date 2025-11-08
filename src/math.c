@@ -5,6 +5,10 @@ uint32_t min(const uint32_t a, const uint32_t b) { return (a < b) ? a : b; }
 
 int32_t max(const int32_t a, const int32_t b) { return (a > b) ? a : b; }
 
+long double dmax(const long double a, const long double b) {
+  return (a > b) ? a : b;
+}
+
 #if defined(BITINT)
 long double lg(const uintx u) {
   // actually a truncated logarithm
@@ -162,4 +166,148 @@ uintx compute_dir(const uint16_t n, const uint16_t k, const uint16_t d,
   }
 
   return (uintx)rop;
+}
+
+intx power(const intx base, const uint32_t exp) {
+  intx res = 1;
+  for (uint32_t i = 0; i < exp; ++i) {
+    res *= base;
+  }
+  return res;
+}
+
+uintx W(const int16_t s, const int16_t c, const int16_t y, const int16_t l) {
+  if (s < 0 || c < 0 || y < 0) {
+    return 0;
+  }
+
+  if (s == 0) {
+    return (uintx)(compute_bin(y + 1, c + 1, NULL) -
+                   compute_bin(y - l, c + 1, NULL));
+  }
+
+  return ((uintx)c * W(s - 1, c, y, l)) +
+         ((uintx)(c + 1) * W(s - 1, c + 1, y, l));
+}
+
+uintx S_p(const uint16_t n, const uint16_t k, const uint16_t d,
+          const uint16_t l, const uint16_t p) {
+  if (k == 0) {
+    return (n == 0 && l > 0) ? 1 : 0;
+  }
+
+  intx total_sum = 0;
+  uint32_t j = (d > 0) ? min(k, n / (d + 1)) : k;
+
+  for (uint32_t i = 0; i <= j; ++i) {
+    int32_t u_i = (d + 1) * i - k + 1;
+    intx inner = 0;
+    for (uint32_t s = 0; s <= p; ++s) {
+      inner +=
+          (intx)compute_bin(p, s, NULL) * power(u_i, p - s) * W(s, k - 1, n - u_i, l);
+    }
+
+    intx term = (intx)compute_bin(k, i, NULL) * inner;
+    if (i % 2 != 0) {
+      total_sum -= term;
+    } else {
+      total_sum += term;
+    }
+  }
+
+  return (uintx)total_sum;
+}
+
+uintx _S0(const uint16_t n, const uint16_t k, const uint16_t d,
+          const uint16_t l) {
+  return S_p(n, k, d, l, 0);
+}
+
+uintx _S1(const uint16_t n, const uint16_t k, const uint16_t d,
+          const uint16_t l) {
+  return S_p(n, k, d, l, 1);
+}
+
+uintx _S2(const uint16_t n, const uint16_t k, const uint16_t d,
+          const uint16_t l) {
+  return S_p(n, k, d, l, 2);
+}
+
+double exp_total_sum(const uint16_t n, const uint16_t k, const uint16_t d,
+                     const uint16_t l) {
+  if (l == 0) {
+    return (double)n;
+  }
+
+  uintx S0 = _S0(n, k, d, l);
+  if (S0 == 0) {
+    return 0.0;
+  }
+
+  return (double)_S1(n, k, d, l) / (double)S0;
+}
+
+double var_total_sum(const uint16_t n, const uint16_t k, const uint16_t d,
+                     const uint16_t l) {
+  if (l == 0) {
+    return 0.0;
+  }
+
+  uintx S0 = _S0(n, k, d, l);
+  if (S0 == 0) {
+    return 0.0;
+  }
+
+  double exp_val = exp_total_sum(n, k, d, l);
+  return dmax(0.0,
+              ((double)_S2(n, k, d, l) / (double)S0) - (exp_val * exp_val));
+}
+
+double var_single_part(const uint16_t n, const uint16_t k, const uint16_t d,
+                       const uint16_t l) {
+  if (k == 0) {
+    return 0.0;
+  }
+
+  uintx S0 = _S0(n, k, d, l);
+  if (S0 == 0) {
+    return 0.0;
+  }
+
+  double lhs = 0.0;
+  for (uint32_t y = 0; y <= min(n, d); ++y) {
+    lhs += ((double)y * y) * (double)S_p(n - y, k - 1, d, l, 0);
+  }
+  lhs /= (double)S0;
+
+  double exp_val = exp_total_sum(n, k, d, l) / k;
+  double rhs = exp_val * exp_val;
+
+  return dmax(0.0, lhs - rhs);
+}
+
+double exp_part_sum(const uint16_t n, const uint16_t k, const uint16_t d,
+                    const uint16_t j, const uint16_t l) {
+  if (k <= 0) {
+    return 0.0;
+  }
+  return (double)j * exp_total_sum(n, k, d, l) / k;
+}
+
+double var_part_sum(const uint16_t n, const uint16_t k, const uint16_t d,
+                    const uint16_t j, const uint16_t l) {
+  if (k <= 1) {
+    return var_total_sum(n, k, d, l);
+  }
+
+  double lhs = ((double)j * (k - j) / (k - 1)) * var_single_part(n, k, d, l);
+  double rhs =
+      ((double)j * (j - 1) / ((double)k * (k - 1))) * var_total_sum(n, k, d, l);
+
+  return dmax(0.0, lhs + rhs);
+}
+
+double stddev_part_sum(const uint16_t n, const uint16_t k, const uint16_t d,
+                       const uint16_t j, const uint16_t l) {
+  return asqrt(var_part_sum(n, k, d, j, l));
 }
