@@ -1,7 +1,9 @@
 #ifndef CACHE_COMMON_H
 #define CACHE_COMMON_H
 
+#include "cache/acc.h"
 #include "cache/bin.h"
+#include "math.h"
 #include "types.h"
 
 static inline bool cache_allocation_fits(const size_t count,

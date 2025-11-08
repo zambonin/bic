@@ -104,61 +104,6 @@ uint8_t scomb_build_cache(const uint32_t n, const uint32_t k, const uint32_t d,
   return 0;
 }
 
-uintx *acc_cache_get_value(const uint32_t n, const uint32_t k, const uint32_t d,
-                           const uint32_t l, const bic_ctx_t ctx) {
-  (void)d;
-  const cache_t *c = ctx->acc_cache;
-  const size_t index = (n * c->cols * c->depth) + (k * c->depth) + l;
-  return &(c->data[index]);
-}
-
-uint32_t acc_from_cache(uintx *rop, const uint32_t n, const uint32_t k,
-                        const uint32_t d, const bic_ctx_t ctx) {
-  const cache_t *c = ctx->acc_cache;
-  const acc_cache_meta_t *meta = (acc_cache_meta_t *)c->meta;
-  const uintx *source = acc_cache_get_value(n, k, d, 0, ctx);
-  for (uint32_t i = 0; i < c->depth; ++i) {
-    rop[i] = source[i];
-  }
-  return meta->lengths[n * c->cols + k];
-}
-
-uintx dir_from_cache(const uint32_t n, const uint32_t k, const uint32_t d,
-                     const uint32_t l, const bic_ctx_t ctx) {
-  return *acc_cache_get_value(n, k, d, l, ctx);
-}
-
-uint8_t acc_build_cache(const uint32_t n, const uint32_t k, const uint32_t d,
-                        bic_ctx_t ctx) {
-  ctx->acc_cache = (cache_t *)malloc(sizeof(cache_t));
-  acc_cache_meta_t *meta = (acc_cache_meta_t *)malloc(sizeof(acc_cache_meta_t));
-
-  cache_t *c = ctx->acc_cache;
-  c->rows = n + 1;
-  c->cols = k;
-  c->depth = d + 2;
-  c->meta = meta;
-
-  meta->lengths = (uint32_t *)malloc(c->rows * c->cols * sizeof(uint32_t));
-  c->data = uintx_alloc(c->rows * c->cols * c->depth);
-  if (c->data == NULL) {
-    return 1;
-  }
-
-  for (uint32_t row = 0; row < c->rows; ++row) {
-    for (uint32_t col = 0; col < c->cols; ++col) {
-      uintx *dest = acc_cache_get_value(row, col, d, 0, ctx);
-      uint32_t len = compute_acc(dest, row, col, d, ctx);
-      meta->lengths[row * c->cols + col] = len;
-    }
-  }
-
-  ctx->acc = acc_from_cache;
-  ctx->dir = dir_from_cache;
-
-  return 0;
-}
-
 void comb_free_cache(bic_ctx_t ctx) {
   if (!ctx || !ctx->comb_cache) {
     return;
@@ -182,22 +127,6 @@ void scomb_free_cache(bic_ctx_t ctx) {
   ctx->scomb_cache = NULL;
 
   ctx->comp = compute_bic;
-}
-
-void acc_free_cache(bic_ctx_t ctx) {
-  if (!ctx || !ctx->acc_cache) {
-    return;
-  }
-
-  acc_cache_meta_t *meta = (acc_cache_meta_t *)ctx->acc_cache->meta;
-  free(meta->lengths);
-  free(meta);
-  uintx_free(ctx->acc_cache->data);
-  free(ctx->acc_cache);
-  ctx->acc_cache = NULL;
-
-  ctx->acc = compute_acc;
-  ctx->dir = compute_dir;
 }
 
 static bool already_built(const bic_cache_t type, const bic_ctx_t ctx) {
