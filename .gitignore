@@ -3,4 +3,5 @@ bin/cli
 *.o
 libbic.a
 libbicext.a
+bin/cache-access
 bin/enum

@@ -8,6 +8,11 @@
 │  Executing a program without passing any flags will show the available     │
 │  options.                                                                  │
 │                                                                            │
+│  * `bin/cache-access.c`: a program to visualize the cache access patterns  │
+│    of the different cache types. It runs the ranking and unranking         │
+│    algorithms and counts how many times each cache entry is accessed.      │
+│    Then, it prints a heatmap of the cache accesses.                        │
+│                                                                            │
 │  * `bin/cli.c`: a simple CLI to test the available algorithms. It will     │
 │    unrank a random integer to a composition and rank it back, showing      │
 │    performance stats and other information.                                │
