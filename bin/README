@@ -18,6 +18,9 @@
 │    unrank a random integer to a composition and rank it back, showing      │
 │    performance stats and other information.                                │
 │                                                                            │
+│  * `bin/enum.c`: a program to enumerate all possible compositions for a    │
+│    given `n`, `k`, and `d`.                                                │
+│                                                                            │
 │  * `bin/perf.c`: a program to measure the performance of the different     │
 │    (un)ranking algorithms, orders, and cache types. It iterates through a  │
 │    range of `k` values and measures the CPU cycles for each combination.   │
