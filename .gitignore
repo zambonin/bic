@@ -3,3 +3,4 @@ bin/cli
 *.o
 libbic.a
 libbicext.a
+bin/enum

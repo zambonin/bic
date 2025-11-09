@@ -12,4 +12,7 @@
 │    unrank a random integer to a composition and rank it back, showing      │
 │    performance stats and other information.                                │
 │                                                                            │
+│  * `bin/enum.c`: a program to enumerate all possible compositions for a    │
+│    given `n`, `k`, and `d`.                                                │
+│                                                                            │
 └────────────────────────────────────────────────────────────────────────────┘
