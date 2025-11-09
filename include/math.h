@@ -33,9 +33,9 @@ uintx compute_dir(const uint16_t n, const uint16_t k, const uint16_t d,
                   const uint16_t l, const bic_ctx_t ctx);
 
 double exp_part_sum(const uint16_t n, const uint16_t k, const uint16_t d,
-                    const uint16_t j, const uint16_t l);
+                    const uint16_t j, const uint16_t l, const bic_ctx_t ctx);
 
 double stddev_part_sum(const uint16_t n, const uint16_t k, const uint16_t d,
-                       const uint16_t j, const uint16_t l);
+                       const uint16_t j, const uint16_t l, const bic_ctx_t ctx);
 
 #endif

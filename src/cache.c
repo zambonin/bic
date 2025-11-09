@@ -24,13 +24,13 @@ uint8_t bin_build_cache(const uint16_t n, const uint16_t k, bic_ctx_t ctx) {
 
   cache_t *c = ctx->bin_cache;
   c->rows = 1;
-  c->cols = k;
+  c->cols = k + 1;
   c->depth = 1;
   c->length = 0;
   c->meta = meta;
 
   meta->max_row = n + c->cols;
-  meta->offsets = (size_t *)calloc(k, sizeof(size_t));
+  meta->offsets = (size_t *)calloc(c->cols, sizeof(size_t));
   for (uint16_t col = 0; col < c->cols; ++col) {
     meta->offsets[col] = c->length;
     c->length += (meta->max_row - col);
@@ -128,8 +128,8 @@ uint8_t scomb_build_cache(const uint16_t n, const uint16_t k, const uint16_t d,
   const uint8_t level = ctx->scomb_cache_stddev_level;
   for (uint16_t col = 0; col < c->cols; ++col) {
     uint16_t j = col + 1;
-    double mean = exp_part_sum(n, k, d, j, 0);
-    double stddev = stddev_part_sum(n, k, d, j, 0);
+    double mean = exp_part_sum(n, k, d, j, 0, ctx);
+    double stddev = stddev_part_sum(n, k, d, j, 0, ctx);
     meta[col].left = max((int32_t)(mean - level * stddev), 0);
     meta[col].right = min((int32_t)(mean + level * stddev), n);
     meta[col].offset = c->length;
