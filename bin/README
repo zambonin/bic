@@ -6,7 +6,8 @@
 │  preserved from the original `libbic.a` compilation.                       │
 │                                                                            │
 │  Executing a program without passing any flags will show the available     │
-│  options.                                                                  │
+│  options. For options where the input is a bitmask, the activated bits     │
+│  point to the ordered entries in the corresponding enumeration.            │
 │                                                                            │
 │  * `bin/cache-access.c`: a program to visualize the cache access patterns  │
 │    of the different cache types. It runs the ranking and unranking         │
@@ -16,6 +17,12 @@
 │  * `bin/cli.c`: a simple CLI to test the available algorithms. It will     │
 │    unrank a random integer to a composition and rank it back, showing      │
 │    performance stats and other information.                                │
+│                                                                            │
+│  * `bin/perf.c`: a program to measure the performance of the different     │
+│    (un)ranking algorithms, orders, and cache types. It iterates through a  │
+│    range of `k` values and measures the CPU cycles for each combination.   │
+│    The output is a table that can be used to compare the performance of    │
+│    the different configurations.                                           │
 │                                                                            │
 │  * `bin/test.c`: a test suite for combinations of API configurations,      │
 │    which generates random parameters and runs a single round trip of       │
