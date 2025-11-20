@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "cache.h"
 #include "extra.h"
 
 typedef struct {
@@ -18,62 +19,71 @@ void count(size_t i) { (*fetch(i))++; }
 
 uint32_t show(size_t i) { return *fetch(i); }
 
-uintx bin_access(const uint32_t n, const uint32_t k, const bic_ctx_t ctx) {
+uintx bin_access(const uint32_t row, const uint32_t col, const bic_ctx_t ctx) {
   if (ctx->cache_type == BIC_CACHE_BIN) {
-    if (k <= n) {
-      const bin_cache_meta_t *meta =
-          (const bin_cache_meta_t *)ctx->bin_cache->meta;
-      count(meta->offsets[k] + (n - k));
+    uintx *ptr = bin_cache_get_ptr(row, col, ctx);
+    if (ptr != NULL) {
+      const size_t index = ptr - ctx->bin_cache->data;
+      count(index);
     }
   }
-  return g_acc_ctx.bin(n, k, ctx);
+  return g_acc_ctx.bin(row, col, ctx);
 }
 
-uintx comp_access(const uint16_t n, const uint16_t k, const uint16_t d,
+uintx comp_access(const uint16_t row, const uint16_t col, const uint16_t d,
                   const bic_ctx_t ctx) {
   if (ctx->cache_type == BIC_CACHE_COMB) {
-    count(n * ctx->comb_cache->cols + k);
+    uintx *ptr = comb_cache_get_ptr(row, col, ctx);
+    if (ptr != NULL) {
+      const size_t index = ptr - ctx->comb_cache->data;
+      count(index);
+    }
   } else if (ctx->cache_type == BIC_CACHE_SMALL_COMB) {
-    const scomb_cache_meta_t m =
-        ((const scomb_cache_meta_t *)ctx->scomb_cache->meta)[k - 1];
-    if (n >= m.left && n <= m.right) {
-      count(m.offset + (n - m.left));
+    uintx *ptr = scomb_cache_get_ptr(row, col, ctx);
+    if (ptr != NULL) {
+      const size_t index = ptr - ctx->scomb_cache->data;
+      count(index);
     }
   }
-  return g_acc_ctx.comp(n, k, d, ctx);
+  return g_acc_ctx.comp(row, col, d, ctx);
 }
 
-uint16_t acc_access(uintx *rop, const uint16_t n, const uint16_t k,
+uint16_t acc_access(uintx *rop, const uint16_t row, const uint16_t col,
                     const uint16_t d, const bic_ctx_t ctx) {
   if (ctx->cache_type == BIC_CACHE_ACC) {
-    const acc_cache_meta_t *meta =
-        (const acc_cache_meta_t *)ctx->acc_cache->meta;
-    const acc_cache_meta_t m = meta[n * ctx->acc_cache->cols + k];
-    for (uint32_t i = 0; i < m.length; i++) {
-      count(m.offset + i);
+    uint16_t len = 0;
+    uintx *ptr = acc_cache_get_ptr(row, col, &len, ctx);
+    if (ptr != NULL) {
+      const size_t index = ptr - ctx->acc_cache->data;
+      for (uint32_t i = 0; i < len; i++) {
+        count(index + i);
+      }
     }
   }
-  return g_acc_ctx.acc(rop, n, k, d, ctx);
+  return g_acc_ctx.acc(rop, row, col, d, ctx);
 }
 
-uintx dir_access(const uint16_t n, const uint16_t k, const uint16_t d,
+uintx dir_access(const uint16_t row, const uint16_t col, const uint16_t d,
                  const uint16_t l, const bic_ctx_t ctx) {
   if (ctx->cache_type == BIC_CACHE_ACC) {
-    const acc_cache_meta_t *meta =
-        (const acc_cache_meta_t *)ctx->acc_cache->meta;
-    const acc_cache_meta_t m = meta[n * ctx->acc_cache->cols + k];
-    count(m.offset + l);
+    uint16_t len = 0;
+    uintx *ptr = acc_cache_get_ptr(row, col, &len, ctx);
+    if (ptr != NULL && l < len) {
+      const size_t index = ptr - ctx->acc_cache->data;
+      count(index + l);
+    }
   }
-  return g_acc_ctx.dir(n, k, d, l, ctx);
+  return g_acc_ctx.dir(row, col, d, l, ctx);
 }
 
 void print_cache_heatmap_bin(const bic_ctx_t ctx) {
   const cache_t *c = ctx->bin_cache;
-  bin_cache_meta_t *meta_bin = (bin_cache_meta_t *)c->meta;
-  for (uint32_t row = 0; row < meta_bin->max_row; row++) {
+  for (uint32_t row = 0; row < c->rows; row++) {
     for (uint32_t col = 0; col < c->cols; col++) {
-      if (row >= col) {
-        printf("%5d ", show(meta_bin->offsets[col] + (row - col)));
+      uintx *ptr = bin_cache_get_ptr(row, col, ctx);
+      if (ptr != NULL) {
+        const size_t index = ptr - c->data;
+        printf("%5d ", show(index));
       } else {
         printf("%5d ", -1);
       }
@@ -86,7 +96,13 @@ void print_cache_heatmap_comb(const bic_ctx_t ctx) {
   const cache_t *c = ctx->comb_cache;
   for (uint32_t row = 0; row < c->rows; row++) {
     for (uint32_t col = 0; col < c->cols; col++) {
-      printf("%5d ", show(row * c->cols + col));
+      uintx *ptr = comb_cache_get_ptr(row, col, ctx);
+      if (ptr != NULL) {
+        const size_t index = ptr - c->data;
+        printf("%5d ", show(index));
+      } else {
+        printf("%5d ", -1);
+      }
     }
     printf("\n");
   }
@@ -94,12 +110,12 @@ void print_cache_heatmap_comb(const bic_ctx_t ctx) {
 
 void print_cache_heatmap_scomb(const bic_ctx_t ctx) {
   const cache_t *c = ctx->scomb_cache;
-  scomb_cache_meta_t *meta_scomb = (scomb_cache_meta_t *)c->meta;
   for (uint32_t row = 0; row < c->rows; row++) {
     for (uint32_t col = 0; col < c->cols; col++) {
-      scomb_cache_meta_t m = meta_scomb[col];
-      if (row >= m.left && row <= m.right) {
-        printf("%5d ", show(m.offset + (row - m.left)));
+      uintx *ptr = scomb_cache_get_ptr(row, col + 1, ctx);
+      if (ptr != NULL) {
+        const size_t index = ptr - c->data;
+        printf("%5d ", show(index));
       } else {
         printf("%5d ", -1);
       }
@@ -110,18 +126,23 @@ void print_cache_heatmap_scomb(const bic_ctx_t ctx) {
 
 void print_cache_heatmap_acc(const bic_ctx_t ctx) {
   const cache_t *c = ctx->acc_cache;
-  acc_cache_meta_t *meta_acc = (acc_cache_meta_t *)c->meta;
   for (uint32_t row = 0; row < c->rows; row++) {
     for (uint32_t col = 0; col < c->cols; col++) {
-      acc_cache_meta_t m = meta_acc[row * c->cols + col];
-      for (uint32_t depth = 0; depth <= c->depth; depth++) {
-        if (depth < m.length) {
-          printf("%5d ", show(m.offset + depth));
+      uint16_t len = 0;
+      uintx *ptr = acc_cache_get_ptr(row, col, &len, ctx);
+      if (ptr == NULL) {
+        continue;
+      }
+      const size_t index = ptr - c->data;
+
+      for (uint32_t depth = 0; depth < c->depth; depth++) {
+        if (depth < len) {
+          const uint32_t value = show(index + depth);
+          printf("%d %d %d %u\n", row, col, depth, value);
         } else {
-          printf("%5d ", -1);
+          printf("%d %d %d %u\n", row, col, depth, 0);
         }
       }
-      printf("\n");
     }
     printf("\n");
   }

@@ -35,31 +35,22 @@ typedef enum {
   BIC_STRATEGY_LENGTH,
 } bic_strategy_t;
 
+typedef struct {
+  size_t offset;
+  uint32_t length;
+  uint32_t base;
+} bic_meta_t;
+
 typedef struct cache_s {
   uintx *data;
   uint32_t rows;
   uint32_t cols;
+  uint32_t d;
   uint32_t depth;
   bic_cache_t prereq;
   size_t length;
-  void *meta;
+  bic_meta_t *meta;
 } cache_t;
-
-typedef struct {
-  uint16_t max_row;
-  size_t *offsets;
-} bin_cache_meta_t;
-
-typedef struct {
-  uint16_t left;
-  uint16_t right;
-  size_t offset;
-} scomb_cache_meta_t;
-
-typedef struct {
-  uint16_t length;
-  size_t offset;
-} acc_cache_meta_t;
 
 typedef void (*bic_unrank_func_t)(uint32_t *rop, const uint16_t n,
                                   const uint16_t k, const uint16_t d,
