@@ -3,6 +3,7 @@
 
 #include "cache/acc.h"
 #include "cache/bin.h"
+#include "cache/sparse_comb.h"
 #include "math.h"
 #include "types.h"
 

@@ -49,14 +49,8 @@ typedef struct cache_s {
   uint32_t depth;
   bic_cache_t prereq;
   size_t length;
-  void *meta;
+  bic_meta_t *meta;
 } cache_t;
-
-typedef struct {
-  uint32_t left;
-  uint32_t right;
-  size_t offset;
-} scomb_cache_meta_t;
 
 typedef void (*bic_unrank_func_t)(uint32_t *rop, const uint32_t n,
                                   const uint32_t k, const uint32_t d,

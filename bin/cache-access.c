@@ -33,10 +33,9 @@ uintx comp_access(const uint32_t n, const uint32_t k, const uint32_t d,
   if (ctx->cache_type == BIC_CACHE_COMB) {
     count(n * ctx->comb_cache->cols + k);
   } else if (ctx->cache_type == BIC_CACHE_SMALL_COMB) {
-    const scomb_cache_meta_t m =
-        ((const scomb_cache_meta_t *)ctx->scomb_cache->meta)[k - 1];
-    if (n >= m.left && n <= m.right) {
-      count(m.offset + (n - m.left));
+    const bic_meta_t m = ((const bic_meta_t *)ctx->scomb_cache->meta)[k - 1];
+    if (n >= m.base && n <= (m.base + m.length - 1)) {
+      count(m.offset + (n - m.base));
     }
   }
   return g_acc_ctx.comp(n, k, d, ctx);
@@ -91,12 +90,12 @@ void print_cache_heatmap_comb(const bic_ctx_t ctx) {
 
 void print_cache_heatmap_scomb(const bic_ctx_t ctx) {
   const cache_t *c = ctx->scomb_cache;
-  scomb_cache_meta_t *meta_scomb = (scomb_cache_meta_t *)c->meta;
+  bic_meta_t *meta_scomb = (bic_meta_t *)c->meta;
   for (uint32_t row = 0; row < c->rows; row++) {
     for (uint32_t col = 0; col < c->cols; col++) {
-      scomb_cache_meta_t m = meta_scomb[col];
-      if (row >= m.left && row <= m.right) {
-        printf("%5d ", show(m.offset + (row - m.left)));
+      bic_meta_t m = meta_scomb[col];
+      if (row >= m.base && row <= (m.base + m.length - 1)) {
+        printf("%5d ", show(m.offset + (row - m.base)));
       } else {
         printf("%5d ", -1);
       }

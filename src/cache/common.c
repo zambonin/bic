@@ -47,63 +47,6 @@ uint8_t comb_build_cache(const uint32_t n, const uint32_t k, const uint32_t d,
   return 0;
 }
 
-uintx bic_from_cache_scomb(const uint32_t n, const uint32_t k, const uint32_t d,
-                           const bic_ctx_t ctx) {
-  const cache_t *c = ctx->scomb_cache;
-  const scomb_cache_meta_t m = ((scomb_cache_meta_t *)c->meta)[k - 1];
-
-  if (n < m.left || n > m.right) {
-    return compute_bic(n, k, d, ctx);
-  }
-
-  return c->data[m.offset + (n - m.left)];
-}
-
-uint8_t scomb_build_cache(const uint32_t n, const uint32_t k, const uint32_t d,
-                          bic_ctx_t ctx) {
-  ctx->scomb_cache = (cache_t *)malloc(sizeof(cache_t));
-
-  cache_t *c = ctx->scomb_cache;
-  c->rows = n + 1;
-  c->cols = k - 1;
-  c->depth = 1;
-  c->length = 0;
-
-  scomb_cache_meta_t *meta =
-      (scomb_cache_meta_t *)calloc(c->cols, sizeof(scomb_cache_meta_t));
-  c->meta = meta;
-
-  double variance = d * (d + 2) / 12;
-  const uint8_t level = ctx->scomb_cache_stddev_level;
-  for (uint32_t col = 0; col < c->cols; ++col) {
-    uint32_t j = col + 1;
-    double mean = j * n / k;
-    double stddev = asqrt(j * variance * (k - j) / k);
-    meta[col].left = max((uint32_t)(mean - level * stddev) + 1, 0);
-    meta[col].right = min((uint32_t)(mean + level * stddev), n);
-    meta[col].offset = c->length;
-    c->length += (meta[col].right - meta[col].left + 1);
-  }
-
-  c->data = uintx_alloc(c->length);
-  if (c->data == NULL) {
-    return 1;
-  }
-
-  for (uint32_t col = 0; col < c->cols; ++col) {
-    scomb_cache_meta_t m = meta[col];
-    uint32_t j = col + 1;
-    uint32_t length = m.right - m.left + 1;
-    for (uint32_t i = 0; i < length; ++i) {
-      c->data[m.offset + i] = compute_bic(m.left + i, j, d, ctx);
-    }
-  }
-
-  ctx->comp = bic_from_cache_scomb;
-
-  return 0;
-}
-
 void comb_free_cache(bic_ctx_t ctx) {
   if (!ctx || !ctx->comb_cache) {
     return;
@@ -112,19 +55,6 @@ void comb_free_cache(bic_ctx_t ctx) {
   uintx_free(ctx->comb_cache->data);
   free(ctx->comb_cache);
   ctx->comb_cache = NULL;
-
-  ctx->comp = compute_bic;
-}
-
-void scomb_free_cache(bic_ctx_t ctx) {
-  if (!ctx || !ctx->scomb_cache) {
-    return;
-  }
-
-  free(ctx->scomb_cache->meta);
-  uintx_free(ctx->scomb_cache->data);
-  free(ctx->scomb_cache);
-  ctx->scomb_cache = NULL;
 
   ctx->comp = compute_bic;
 }
