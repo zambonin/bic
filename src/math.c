@@ -1,5 +1,6 @@
 #include "math.h"
 #include "cache.h"
+#include "primes.h"
 
 uint32_t min(const uint32_t a, const uint32_t b) { return (a < b) ? a : b; }
 
@@ -63,31 +64,64 @@ uintx ipow(const uint64_t b, const uint64_t e) {
   return result;
 }
 
+uint64_t kummer(const uint64_t n, const uint64_t k, const uint64_t p) {
+  uint64_t n_ = n;
+  uint64_t k_ = k;
+
+  uint64_t c = 0;
+  uint64_t r = 0;
+  while (n_ >= p) {
+    if ((n_ % p) < (k_ % p) + r) {
+      r = 1;
+      c++;
+    } else {
+      r = 0;
+    }
+
+    n_ /= p;
+    k_ /= p;
+  }
+
+  return c + (n_ < k_ + r);
+}
+
 uintx compute_bin(const uint32_t n, const uint32_t k, const bic_ctx_t ctx) {
   (void)ctx;
+
   if (k > n) {
     return 0;
   }
-
-  if ((k == 0) || (k == n)) {
+  if (k == 0 || k == n) {
     return 1;
   }
 
-  uint16_t kk = k;
-  if (2 * k > n) {
-    kk = n - k;
+  const uint64_t kb = (k > n / 2) ? n - k : k;
+  const uint64_t nk = n - kb;
+
+  uintx res = 1;
+  for (size_t i = 0; i < N_PRIMES; i++) {
+    const uint64_t p = PRIMES[i];
+    if (p > n) {
+      break;
+    }
+
+    if (p > nk) {
+      res *= (uintx)p;
+    } else if (p > n / 2) {
+      continue;
+    } else if (p * p > n) {
+      if ((n % p) < (kb % p)) {
+        res *= (uintx)p;
+      }
+    } else {
+      const uint64_t e = kummer(n, kb, p);
+      if (e) {
+        res *= ipow(p, e);
+      }
+    }
   }
 
-  uintx b = n - kk + 1;
-  uintx f = b;
-
-  for (uintx j = 2; j <= kk; ++j) {
-    ++f;
-    b *= f;
-    b /= j;
-  }
-
-  return b;
+  return res;
 }
 
 uintx compute_bic_no_cache(const uint16_t n, const uint16_t k,
@@ -112,7 +146,7 @@ uintx compute_bic_no_cache(const uint16_t n, const uint16_t k,
     rop += compute;
   }
 
-  return (uintx)rop;
+  return (rop < 0) ? 0 : (uintx)rop;
 }
 
 uintx compute_bic_with_sums(const uint16_t n, const uint16_t k,
@@ -142,7 +176,7 @@ uintx compute_bic_with_sums(const uint16_t n, const uint16_t k,
     }
   }
 
-  return (uintx)rop;
+  return (rop < 0) ? 0 : (uintx)rop;
 }
 
 uintx compute_bic(const uint16_t n, const uint16_t k, const uint16_t d,
@@ -182,7 +216,7 @@ uintx compute_dir(const uint16_t n, const uint16_t k, const uint16_t d,
     rop += tmp;
   }
 
-  return (uintx)rop;
+  return (rop < 0) ? 0 : (uintx)rop;
 }
 
 uintx W(const int16_t s, const int16_t c, const int16_t y, const int16_t l,
