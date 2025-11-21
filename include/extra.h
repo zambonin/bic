@@ -157,6 +157,7 @@ static const char *bic_cache_sub_options[BIC_CACHE_LENGTH] = {
     "#C(n, k, d) for intermediate parameters",
     "#C(n, k, d) for intermediate parameters (gaussian)",
     "accumulated sums of #C(n, k, d)",
+    "accumulated sums of #C(n, k, d) (gaussian)",
 };
 
 static const cli_option_def_t opt_cache = {

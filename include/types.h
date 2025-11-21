@@ -25,6 +25,7 @@ typedef enum {
   BIC_CACHE_COMB,
   BIC_CACHE_SMALL_COMB,
   BIC_CACHE_ACC,
+  BIC_CACHE_SMALL_ACC,
   BIC_CACHE_LENGTH,
 } bic_cache_t;
 
@@ -90,6 +91,7 @@ struct bic_ctx_s {
   cache_t *bin_cache;
   cache_t *comb_cache;
   cache_t *scomb_cache;
+  cache_t *small_acc_cache;
   cache_t *acc_cache;
 
   bic_math_bin_func_t bin;

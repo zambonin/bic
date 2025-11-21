@@ -3,7 +3,7 @@
 
 static const bic_cache_t dependencies[BIC_CACHE_LENGTH] = {
     BIC_CACHE_NONE, BIC_CACHE_NONE, BIC_CACHE_BIN,
-    BIC_CACHE_BIN,  BIC_CACHE_COMB,
+    BIC_CACHE_BIN,  BIC_CACHE_COMB, BIC_CACHE_COMB,
 };
 
 size_t bin_cache_length(const uint16_t rows, const uint16_t cols,
@@ -294,6 +294,94 @@ uint8_t acc_build_cache(const uint16_t n, const uint16_t k, const uint16_t d,
   return 0;
 }
 
+uintx small_acc_dir_get(const uint16_t n, const uint16_t k, const uint16_t d,
+                        const uint16_t l, const bic_ctx_t ctx) {
+  const cache_t *c = ctx->small_acc_cache;
+  if (c == NULL || k >= c->rows || l >= c->cols) {
+    return compute_dir(n, k, d, l, ctx);
+  }
+
+  const bic_meta_t m = c->meta[k * c->cols + l];
+
+  if (n < m.base || n >= m.base + m.length) {
+    return compute_dir(n, k, d, l, ctx);
+  }
+
+  return c->data[m.offset + (n - m.base)];
+}
+
+size_t small_acc_cache_length(const uint16_t rows, const uint16_t cols,
+                              const uint16_t n, const uint16_t k,
+                              const uint16_t d, const uint8_t level,
+                              bic_meta_t *const meta, const bic_ctx_t ctx) {
+  size_t total = 0;
+
+  for (uint16_t row = 1; row < rows; ++row) {
+    for (uint16_t col = 0; col < cols; ++col) {
+      const double mean = exp_part_sum(n, k, d, row, col, ctx);
+      const double stddev = stddev_part_sum(n, k, d, row, col, ctx);
+      const uint16_t lower_bound_n = (col > 0) ? (col - 1) : 0;
+      const uint16_t left =
+          max(max((int32_t)(mean - level * stddev), 0), lower_bound_n);
+      const uint16_t right = min((int32_t)(mean + level * stddev), n);
+      const uint16_t len = (right >= left) ? (right - left + 1) : 0;
+
+      if (meta != NULL) {
+        bic_meta_t *m = &meta[row * cols + col];
+        m->base = left;
+        m->length = len;
+        m->offset = total;
+      }
+
+      total += len;
+    }
+  }
+
+  return total;
+}
+
+uint8_t small_acc_build_cache(const uint16_t n, const uint16_t k,
+                              const uint16_t d, const bic_ctx_t ctx) {
+  cache_t *c = ctx->small_acc_cache = (cache_t *)malloc(sizeof(cache_t));
+
+  c->rows = k + 1;
+  c->cols = d + 1;
+  c->depth = 0;
+
+  c->meta = (bic_meta_t *)calloc(c->rows * c->cols, sizeof(bic_meta_t));
+  c->length = small_acc_cache_length(
+      c->rows, c->cols, n, k, d, ctx->scomb_cache_stddev_level, c->meta, ctx);
+
+  c->data = uintx_alloc(c->length);
+  if (c->data == NULL) {
+    return 1;
+  }
+
+  for (uint16_t row = 1; row < c->rows; ++row) {
+    for (uint16_t col = 0; col < c->cols; ++col) {
+      const bic_meta_t m = c->meta[row * c->cols + col];
+      if (m.length == 0) {
+        continue;
+      }
+      uintx *const slice = &c->data[m.offset];
+
+      uintx sum = 0;
+      for (uint16_t i = 0; i < m.base + 1; ++i) {
+        sum += ctx->comp(m.base - i, row, d, ctx);
+      }
+      slice[0] = sum;
+
+      for (uint16_t l = 1; l < m.length; ++l) {
+        slice[l] = slice[l - 1] + ctx->comp(m.base + l, row, d, ctx);
+      }
+    }
+  }
+
+  ctx->dir = small_acc_dir_get;
+
+  return 0;
+}
+
 void bin_free_cache(bic_ctx_t ctx) {
   if (!ctx || !ctx->bin_cache) {
     return;
@@ -346,6 +434,34 @@ void acc_free_cache(bic_ctx_t ctx) {
   ctx->dir = compute_dir;
 }
 
+void small_acc_free_cache(bic_ctx_t ctx) {
+  if (!ctx || !ctx->small_acc_cache) {
+    return;
+  }
+
+  free(ctx->small_acc_cache->meta);
+  uintx_free(ctx->small_acc_cache->data);
+  free(ctx->small_acc_cache);
+  ctx->small_acc_cache = NULL;
+}
+
+uint8_t small_acc_get_bounds(const uint16_t j, const uint16_t l,
+                             uint32_t *lower, uint32_t *upper,
+                             const bic_ctx_t ctx) {
+  const cache_t *c = ctx->small_acc_cache;
+  if (c == NULL || j >= c->rows || l >= c->cols) {
+    return 1;
+  }
+
+  const size_t index = j * c->cols + l;
+  const bic_meta_t m = c->meta[index];
+
+  *lower = m.base;
+  *upper = m.base + m.length;
+
+  return 0;
+}
+
 static bool already_built(const bic_cache_t type, const bic_ctx_t ctx) {
   switch (type) {
   case BIC_CACHE_BIN:
@@ -356,6 +472,8 @@ static bool already_built(const bic_cache_t type, const bic_ctx_t ctx) {
     return ctx->scomb_cache != NULL;
   case BIC_CACHE_ACC:
     return ctx->acc_cache != NULL;
+  case BIC_CACHE_SMALL_ACC:
+    return ctx->small_acc_cache != NULL;
   default:
     return true;
   }
@@ -380,6 +498,11 @@ uint8_t build_cache_rec(const bic_cache_t type, const uint16_t n,
     return scomb_build_cache(n, k, d, ctx);
   case BIC_CACHE_ACC:
     return acc_build_cache(n, k, d, ctx);
+  case BIC_CACHE_SMALL_ACC:
+    if (ctx->unrank_alg == BIC_ALG_AD) {
+      return 0;
+    }
+    return small_acc_build_cache(n, k, d, ctx);
   default:
     return 1;
   }
@@ -392,4 +515,5 @@ void free_all_caches(bic_ctx_t ctx) {
   comb_free_cache(ctx);
   scomb_free_cache(ctx);
   acc_free_cache(ctx);
+  small_acc_free_cache(ctx);
 }

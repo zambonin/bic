@@ -48,6 +48,20 @@ uintx comp_access(const uint16_t row, const uint16_t col, const uint16_t d,
   return g_acc_ctx.comp(row, col, d, ctx);
 }
 
+uintx *small_acc_get_val_ptr(const uint16_t j, const uint16_t l,
+                             const uint16_t s, const bic_ctx_t ctx) {
+  const cache_t *c = ctx->small_acc_cache;
+  if (c == NULL || j >= c->rows || l >= c->cols)
+    return NULL;
+
+  const size_t meta_idx = j * c->cols + l;
+  const bic_meta_t m = c->meta[meta_idx];
+
+  if (s < m.base || s >= m.base + m.length)
+    return NULL;
+  return &c->data[m.offset + (s - m.base)];
+}
+
 uint16_t acc_access(uintx *rop, const uint16_t row, const uint16_t col,
                     const uint16_t d, const bic_ctx_t ctx) {
   if (ctx->cache_type == BIC_CACHE_ACC) {
@@ -71,6 +85,11 @@ uintx dir_access(const uint16_t row, const uint16_t col, const uint16_t d,
     if (ptr != NULL && l < len) {
       const size_t index = ptr - ctx->acc_cache->data;
       count(index + l);
+    }
+  } else if (ctx->cache_type == BIC_CACHE_SMALL_ACC) {
+    uintx *ptr = small_acc_get_val_ptr(col, l, row, ctx);
+    if (ptr != NULL) {
+      count(ptr - ctx->small_acc_cache->data);
     }
   }
   return g_acc_ctx.dir(row, col, d, l, ctx);
@@ -148,6 +167,26 @@ void print_cache_heatmap_acc(const bic_ctx_t ctx) {
   }
 }
 
+void print_cache_heatmap_small_acc(const bic_ctx_t ctx) {
+  const cache_t *c = ctx->small_acc_cache;
+  for (uint16_t j = 1; j < c->rows; j++) {
+    for (uint16_t l = 0; l < c->cols; l++) {
+      uint32_t lower_s, upper_s;
+      if (small_acc_get_bounds(j, l, &lower_s, &upper_s, ctx) != 0) {
+        printf("%5d ", -1);
+        continue;
+      }
+      uint32_t access_sum = 0;
+      for (uint32_t s = lower_s; s < upper_s; ++s) {
+        access_sum +=
+            show((size_t)(small_acc_get_val_ptr(j, l, s, ctx) - c->data));
+      }
+      printf("%5u ", access_sum);
+    }
+    printf("\n");
+  }
+}
+
 void setup_wrappers(bic_ctx_t ctx) {
   g_acc_ctx.bin = ctx->bin;
   ctx->bin = bin_access;
@@ -178,6 +217,9 @@ uint8_t allocate_counters(bic_ctx_t ctx) {
   case BIC_CACHE_ACC:
     c = ctx->acc_cache;
     break;
+  case BIC_CACHE_SMALL_ACC:
+    c = ctx->small_acc_cache;
+    break;
   default:
     break;
   }
@@ -200,6 +242,9 @@ void print_cache_heatmap(bic_ctx_t ctx) {
     break;
   case BIC_CACHE_ACC:
     print_cache_heatmap_acc(ctx);
+    break;
+  case BIC_CACHE_SMALL_ACC:
+    print_cache_heatmap_small_acc(ctx);
     break;
   default:
     break;
