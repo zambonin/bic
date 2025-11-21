@@ -41,6 +41,7 @@ bic_ctx_t bic_ctx_init() {
   ctx->bin_cache = NULL;
   ctx->comb_cache = NULL;
   ctx->scomb_cache = NULL;
+  ctx->small_acc_cache = NULL;
   ctx->acc_cache = NULL;
 
   ctx->bin = compute_bin;

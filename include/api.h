@@ -48,7 +48,7 @@ uint8_t bic_ctx_set_cache(const uint8_t cache, bic_ctx_t ctx);
 uint8_t bic_ctx_set_cache_by_name(const char *name, bic_ctx_t ctx);
 
 static const char *bic_cache_names[BIC_CACHE_LENGTH] = {
-    "none", "bin", "comb", "scomb", "acc",
+    "none", "bin", "comb", "scomb", "acc", "sacc",
 };
 static const find_ctx_t bic_cache_find_ctx = {
     .names = bic_cache_names,

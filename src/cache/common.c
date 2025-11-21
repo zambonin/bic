@@ -3,7 +3,7 @@
 
 static const bic_cache_t dependencies[BIC_CACHE_LENGTH] = {
     BIC_CACHE_NONE, BIC_CACHE_NONE, BIC_CACHE_BIN,
-    BIC_CACHE_BIN,  BIC_CACHE_COMB,
+    BIC_CACHE_BIN,  BIC_CACHE_COMB, BIC_CACHE_COMB,
 };
 
 uintx *comb_cache_get_value(const uint32_t n, const uint32_t k,
@@ -69,6 +69,8 @@ static bool already_built(const bic_cache_t type, const bic_ctx_t ctx) {
     return ctx->scomb_cache != NULL;
   case BIC_CACHE_ACC:
     return ctx->acc_cache != NULL;
+  case BIC_CACHE_SMALL_ACC:
+    return ctx->small_acc_cache != NULL;
   default:
     return true;
   }
@@ -93,6 +95,8 @@ uint8_t build_cache_rec(const bic_cache_t type, const uint32_t n,
     return scomb_build_cache(n, k, d, ctx);
   case BIC_CACHE_ACC:
     return acc_build_cache(n, k, d, ctx);
+  case BIC_CACHE_SMALL_ACC:
+    return small_acc_build_cache(n, k, d, ctx);
   default:
     return 1;
   }
@@ -105,4 +109,5 @@ void free_all_caches(bic_ctx_t ctx) {
   comb_free_cache(ctx);
   scomb_free_cache(ctx);
   acc_free_cache(ctx);
+  small_acc_free_cache(ctx);
 }
