@@ -46,6 +46,23 @@ double asqrt(double x) {
   return z;
 }
 
+uintx ipow(const uint64_t b, const uint64_t e) {
+  uint64_t base = b;
+  uint64_t exp = e;
+
+  uintx result = 1;
+  while (exp) {
+    if (exp & 1) {
+      result *= base;
+    }
+
+    base *= base;
+    exp >>= 1;
+  }
+
+  return result;
+}
+
 uintx compute_bin(const uint32_t n, const uint32_t k, const bic_ctx_t ctx) {
   (void)ctx;
   if (k > n) {
@@ -168,14 +185,6 @@ uintx compute_dir(const uint16_t n, const uint16_t k, const uint16_t d,
   return (uintx)rop;
 }
 
-intx power(const intx base, const uint32_t exp) {
-  intx res = 1;
-  for (uint32_t i = 0; i < exp; ++i) {
-    res *= base;
-  }
-  return res;
-}
-
 uintx W(const int16_t s, const int16_t c, const int16_t y, const int16_t l,
         const bic_ctx_t ctx) {
   if (s < 0 || c < 0 || y < 0) {
@@ -188,7 +197,7 @@ uintx W(const int16_t s, const int16_t c, const int16_t y, const int16_t l,
 
   uintx sum = 0;
   for (int i = max(c, y - l); i <= y; ++i) {
-    uintx pow_i_s = (uintx)power(i, s);
+    uintx pow_i_s = ipow(i, s);
     uintx bin_i_c = ctx->bin(i, c, ctx);
     sum += pow_i_s * bin_i_c;
   }
@@ -208,7 +217,7 @@ uintx S_p(const uint16_t n, const uint16_t k, const uint16_t d,
     int32_t u_i = (d + 1) * i - k + 1;
     intx inner = 0;
     for (uint32_t s = 0; s <= p; ++s) {
-      inner += (intx)ctx->bin(p, s, ctx) * power(u_i, p - s) *
+      inner += (intx)ctx->bin(p, s, ctx) * ipow(u_i, p - s) *
                W(s, k - 1, n - u_i, l, ctx);
     }
 
