@@ -46,11 +46,20 @@ double asqrt(double x) {
   return z;
 }
 
-uintx ipow(const uint64_t base, const uint64_t exponent) {
+uintx ipow(const uint64_t b, const uint64_t e) {
+  uint64_t base = b;
+  uint64_t exp = e;
+
   uintx result = 1;
-  for (uint64_t i = 0; i < exponent; ++i) {
-    result *= base;
+  while (exp) {
+    if (exp & 1) {
+      result *= base;
+    }
+
+    base *= base;
+    exp >>= 1;
   }
+
   return result;
 }
 
