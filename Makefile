@@ -5,6 +5,7 @@ TARGETS = $(basename $(wildcard bin/*.c))
 OBJ = $(SRC:.c=.o)
 LIB = libbic.a
 LIBEXTRA = libbicext.a
+PRIMES = include/primes.h
 
 BACKEND ?= bitint
 INTWIDTH ?= 512
@@ -25,6 +26,11 @@ endif
 
 default:
 
+src/math.o: $(PRIMES)
+
+$(PRIMES): src/gen-primes.awk /usr/bin/awk
+	awk -v width=$(INTWIDTH) -f $< > $@
+
 $(LIB): $(OBJ)
 	$(RM) $@
 	$(AR) rcs $@ $^
@@ -37,4 +43,4 @@ $(TARGETS): %: %.o $(LIBEXTRA)
 
 clean:
 	$(RM) $(OUT) $(wildcard src/*.o src/order/*.o src/cache/*.o) $(wildcard bin/*.o) \
-		$(LIB) $(LIBEXTRA) $(TARGETS)
+		$(LIB) $(LIBEXTRA) $(TARGETS) $(PRIMES)

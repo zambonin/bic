@@ -1,5 +1,6 @@
 #include "math.h"
 #include "cache/common.h"
+#include "primes.h"
 
 uint32_t min(const uint32_t a, const uint32_t b) { return (a < b) ? a : b; }
 
@@ -63,32 +64,97 @@ uintx ipow(const uint64_t b, const uint64_t e) {
   return result;
 }
 
-// from FXT: aux0/binomial.h
+uint64_t kummer(const uint64_t n, const uint64_t k, const uint64_t p) {
+  uint64_t n_ = n;
+  uint64_t k_ = k;
+
+  uint64_t c = 0;
+  uint64_t r = 0;
+  while (n_ >= p) {
+    if ((n_ % p) < (k_ % p) + r) {
+      r = 1;
+      c++;
+    } else {
+      r = 0;
+    }
+
+    n_ /= p;
+    k_ /= p;
+  }
+
+  return c + (n_ < k_ + r);
+}
+
+static uint32_t gcd32(uint32_t a, uint32_t b) {
+  while (b != 0) {
+    const uint32_t rem = a % b;
+    a = b;
+    b = rem;
+  }
+  return a;
+}
+
+static uintx compute_bin_without_primes(const uint32_t n, const uint32_t k) {
+  const uint32_t choose = min(k, n - k);
+  uintx result = 1;
+
+  for (uint32_t i = 1; i <= choose; ++i) {
+    uint32_t numerator = n - choose + i;
+    uint32_t denominator = i;
+    const uint32_t common = gcd32(numerator, denominator);
+    numerator /= common;
+    denominator /= common;
+
+    result /= denominator;
+    result *= numerator;
+  }
+
+  return result;
+}
+
+// Goetgheluck (1987): doi:10.1080/00029890.1987.12000648
 uintx compute_bin(const uint32_t n, const uint32_t k, const bic_ctx_t ctx) {
   (void)ctx;
+
   if (k > n) {
     return 0;
   }
-
-  if ((k == 0) || (k == n)) {
+  if (k == 0 || k == n) {
     return 1;
   }
 
-  uint32_t kk = k;
-  if (2 * k > n) {
-    kk = n - k;
+  if (n > PRIMES[N_PRIMES - 1]) {
+    return compute_bin_without_primes(n, k);
   }
 
-  uintx b = n - kk + 1;
-  uintx f = b;
+  const uint64_t kb = (k > n / 2) ? n - k : k;
+  const uint64_t nk = n - kb;
 
-  for (uintx j = 2; j <= kk; ++j) {
-    ++f;
-    b *= f;
-    b /= j;
+  uintx res = 1;
+  for (size_t i = 0; i < N_PRIMES; i++) {
+    const uint64_t p = PRIMES[i];
+    if (p > n) {
+      break;
+    }
+
+    if (p > nk) {
+      res *= (uintx)p;
+    } else if (p > n / 2) {
+      continue;
+    } else if (p * p > n) {
+      if ((n % p) < (kb % p)) {
+        res *= (uintx)p;
+      }
+    } else {
+      const uint64_t e = kummer(n, kb, p);
+      if (e) {
+        const uintx power = ipow(p, e);
+        res *= power;
+      }
+    }
   }
 
-  return b;
+  return res;
 }
 
 uintx compute_bic_no_cache(const uint32_t n, const uint32_t k,

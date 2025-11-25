@@ -1,4 +1,5 @@
 bin/cli
+include/primes.h
 *.png
 *.o
 libbic.a
