@@ -108,7 +108,8 @@ uint8_t acc_build_cache(const uint32_t n, const uint32_t k, const uint32_t d,
       uintx *const slice = acc_cache_get_ptr(row, real_k, &len, ctx);
       slice[0] = 0;
       for (uint32_t l = 0; l < len - 1; ++l) {
-        const uintx prev = (row < l) ? 0 : ctx->comp(row - l, real_k, d, ctx);
+        const uintx prev =
+            (row < l) ? 0 : comb_cache_get(row - l, real_k, d, ctx);
         slice[l + 1] = slice[l] + prev;
       }
     }
