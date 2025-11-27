@@ -87,10 +87,18 @@ uint8_t comb_build_cache(const uint16_t n, const uint16_t k, const uint16_t d,
     return 1;
   }
 
-  *comb_cache_get_value(0, 0, ctx) = 1;
-  for (uint16_t row = 0; row < c->rows; ++row) {
+  for (uint16_t col = 0; col < c->cols; ++col) {
+    *comb_cache_get_value(0, col, ctx) = 1;
+  }
+
+  for (uint16_t row = 1; row < c->rows; ++row) {
     for (uint16_t col = 1; col < c->cols; ++col) {
-      *comb_cache_get_value(row, col, ctx) = compute_bic(row, col, d, ctx);
+      const uintx up = bic_from_cache_comb(row - 1, col, d, ctx);
+      const uintx left = bic_from_cache_comb(row, col - 1, d, ctx);
+      const uintx inc_enc =
+          (row < d + 1) ? 0 : bic_from_cache_comb(row - d - 1, col - 1, d, ctx);
+      const uintx res = up + left - inc_enc;
+      *comb_cache_get_value(row, col, ctx) = res;
     }
   }
 
