@@ -4,6 +4,7 @@ SRC = $(filter-out src/extra.c, $(wildcard src/*.c))
 TARGETS = $(basename $(wildcard bin/*.c))
 OBJ = $(SRC:.c=.o)
 LIB = libbic.a
+LIBEXTRA = libbicext.a
 
 PRIMES = include/primes.h
 
@@ -31,10 +32,13 @@ src/math.o: $(PRIMES)
 $(LIB): $(OBJ)
 	$(AR) rcs $@ $^
 
+$(LIBEXTRA): $(OBJ) src/extra.o
+	$(AR) rcs $@ $^
+
 $(PRIMES): src/gen-primes.awk /usr/bin/awk
 	awk -v width=$(INTWIDTH) -f $< > $@
 
-$(TARGETS): %: %.o src/extra.o $(LIB)
+$(TARGETS): %: %.o $(LIBEXTRA)
 
 test: bin/test
 	./$< -i 128 -r 0
