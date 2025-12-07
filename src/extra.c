@@ -76,15 +76,23 @@ void bic_run_round_trips(const uint16_t n, const uint16_t k, const uint16_t d,
 
     const uintx r = random_rank(n, k, d);
 
-    if (utime && ucycles) {
-      PERF(*utime, *ucycles, bic_unrank(comp, n, k, d, r, ctx), unrank);
+    if (utime || ucycles) {
+      long double dummy_time;
+      long double dummy_cycles;
+      long double *t = utime ? utime : &dummy_time;
+      long double *c = ucycles ? ucycles : &dummy_cycles;
+      PERF(*t, *c, bic_unrank(comp, n, k, d, r, ctx), unrank);
     } else {
       bic_unrank(comp, n, k, d, r, ctx);
     }
 
     uintx rr;
-    if (rtime && rcycles) {
-      PERF(*rtime, *rcycles, rr = bic_rank(n, k, d, comp, ctx), rank);
+    if (rtime || rcycles) {
+      long double dummy_time;
+      long double dummy_cycles;
+      long double *t = rtime ? rtime : &dummy_time;
+      long double *c = rcycles ? rcycles : &dummy_cycles;
+      PERF(*t, *c, rr = bic_rank(n, k, d, comp, ctx), rank);
     } else {
       rr = bic_rank(n, k, d, comp, ctx);
     }
