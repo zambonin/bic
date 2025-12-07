@@ -3,53 +3,17 @@
 #include <string.h>
 #include <time.h>
 
-#include "cache.h" // Added for cache length function declarations
+#include "cache.h"
 #include "extra.h"
-#include "strat.h"
 
 static const uint16_t SMALL = 64;
-static const uint16_t LIMIT = 1000;
 
-// Copied from bin/test.c
 uint16_t uniform_1_to_64(void) { return (random() % SMALL) + 1; }
-
-void gen_small_params_mingen(uint16_t *n, uint16_t *k, uint16_t *d) {
-  do {
-    uint16_t m = uniform_1_to_64();
-    *k = uniform_1_to_64();
-    mingen(m, n, *k, d);
-  } while (*n > LIMIT || !*n);
-}
-
-void gen_small_params_minver(uint16_t *n, uint16_t *k, uint16_t *d) {
-  do {
-    uint16_t m = uniform_1_to_64();
-    *k = uniform_1_to_64();
-    minver(m, n, *k, d);
-  } while (*n > LIMIT || !*n);
-}
 
 void gen_small_params_random(uint16_t *n, uint16_t *k, uint16_t *d) {
   *k = uniform_1_to_64();
   *d = uniform_1_to_64();
-  *n = (random() % ((*k * *d + 1) / 2)) + 1;
-}
-
-void bic_run_random_params(uint16_t *n, uint16_t *k, uint16_t *d,
-                           const bic_ctx_t ctx) {
-  switch (ctx->strategy) {
-  case BIC_STRATEGY_GEN:
-    gen_small_params_mingen(n, k, d);
-    break;
-  case BIC_STRATEGY_VER:
-    gen_small_params_minver(n, k, d);
-    break;
-  case BIC_STRATEGY_RANDOM:
-    gen_small_params_random(n, k, d);
-    break;
-  default:
-    return;
-  }
+  *n = (*k * *d + 1) / 2;
 }
 
 static const cli_option_def_t opt_stddev = {
@@ -87,60 +51,53 @@ int32_t main(int32_t argc, char **argv) {
 
   bic_ctx_set_cache(BIC_CACHE_COMB, ctx);
 
-  printf("n\tk\td\tstddev\tRagged Save\tSComb Save\tSAcc Save\n");
+  printf("n\tk\td\tstddev\tbin\tcomb\tacc\n");
 
-  for (uint8_t strat = 0; strat < BIC_STRATEGY_LENGTH; strat++) {
-    bic_ctx_set_strategy(strat, ctx);
-    for (uint32_t it = 0; it < iterations; ++it) {
-      uint16_t n = 0;
-      uint16_t k = 0;
-      uint16_t d = 0;
+  for (uint32_t it = 0; it < iterations; ++it) {
+    uint16_t n = 0;
+    uint16_t k = 0;
+    uint16_t d = 0;
 
-      bic_run_random_params(&n, &k, &d, ctx);
-      bic_precompute(n, k, d, ctx);
+    gen_small_params_random(&n, &k, &d, ctx);
+    bic_precompute(n, k, d, ctx);
 
-      uint16_t bin_cols = k + 1;
-      uint16_t bin_rows = n + bin_cols;
+    uint16_t bin_cols = k + 1;
+    uint16_t bin_rows = n + bin_cols;
 
-      size_t ragged_size = bin_cache_length(bin_rows, bin_cols, NULL);
-      size_t full_size = (size_t)bin_rows * bin_cols;
+    size_t ragged_size = bin_cache_length(bin_rows, bin_cols, NULL);
+    size_t full_size = (size_t)bin_rows * bin_cols;
 
-      uint16_t comb_rows = n + 1;
-      uint16_t comb_cols = k + 1;
+    uint16_t comb_rows = n + 1;
+    uint16_t comb_cols = k + 1;
 
-      size_t comb_size = comb_cache_length(comb_rows, comb_cols);
-      uint16_t scomb_rows = n + 1;
-      uint16_t scomb_cols = k - 1;
+    size_t comb_size = comb_cache_length(comb_rows, comb_cols);
+    uint16_t scomb_rows = n + 1;
+    uint16_t scomb_cols = k - 1;
 
-      uint16_t acc_rows = n + 1;
-      uint16_t acc_cols = k;
+    uint16_t acc_rows = n + 1;
+    uint16_t acc_cols = k;
 
-      size_t acc_size = acc_cache_length(acc_rows, acc_cols, d, NULL);
-      uint16_t sacc_rows = k + 1;
-      uint16_t sacc_cols = d + 1;
+    size_t acc_size = acc_cache_length(acc_rows, acc_cols, d, NULL);
+    uint16_t sacc_rows = k + 1;
+    uint16_t sacc_cols = d + 1;
 
-      for (uint32_t s = 1; s <= max_stddev; ++s) {
-        ctx->scomb_cache_stddev_level = s;
+    for (uint32_t s = 1; s <= max_stddev; ++s) {
+      ctx->scomb_cache_stddev_level = s;
 
-        size_t scomb_size_val =
-            scomb_cache_length(scomb_rows, scomb_cols, d,
-                               ctx->scomb_cache_stddev_level, NULL, ctx);
-        size_t sacc_size_val =
-            small_acc_cache_length(sacc_rows, sacc_cols, n, k, d,
-                                   ctx->scomb_cache_stddev_level, NULL, ctx);
+      size_t scomb_size_val = scomb_cache_length(
+          scomb_rows, scomb_cols, d, ctx->scomb_cache_stddev_level, NULL, ctx);
+      size_t sacc_size_val =
+          small_acc_cache_length(sacc_rows, sacc_cols, n, k, d,
+                                 ctx->scomb_cache_stddev_level, NULL, ctx);
 
-        double ragged_save_percent =
-            (1.0 - (double)ragged_size / full_size) * 100.0;
-        double scomb_save_percent =
-            (1.0 - (double)scomb_size_val / comb_size) * 100.0;
-        double sacc_save_percent =
-            (1.0 - (double)sacc_size_val / acc_size) * 100.0;
+      double ragged_save_percent = (1.0 - (double)ragged_size / full_size);
+      double scomb_save_percent = (1.0 - (double)scomb_size_val / comb_size);
+      double sacc_save_percent = (1.0 - (double)sacc_size_val / acc_size);
 
-        printf("%d\t%d\t%d\t%d\t%.2f%%\t\t%.2f%%\t\t%.2f%%\n", n, k, d, s,
-               ragged_save_percent, scomb_save_percent, sacc_save_percent);
-      }
-      bic_free_precomputed(ctx);
+      printf("%d\t%d\t%d\t%d\t%.4f\t%.4f\t%.4f\n", n, k, d, s,
+             ragged_save_percent, scomb_save_percent, sacc_save_percent);
     }
+    bic_free_precomputed(ctx);
   }
 
   bic_ctx_destroy(ctx);
