@@ -58,7 +58,7 @@ int32_t main(int32_t argc, char **argv) {
     uint16_t k = 0;
     uint16_t d = 0;
 
-    gen_small_params_random(&n, &k, &d, ctx);
+    gen_small_params_random(&n, &k, &d);
     bic_precompute(n, k, d, ctx);
 
     uint16_t bin_cols = k + 1;

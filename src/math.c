@@ -39,7 +39,7 @@ double asqrt(double x) {
 
   double z = x / 2.0;
   double y = 0.0;
-  while (z - y > e) {
+  while (y == 0 || (y - z) > e) {
     y = z;
     z = (z + x / z) / 2.0;
   }

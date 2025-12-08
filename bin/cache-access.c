@@ -173,17 +173,14 @@ void print_cache_heatmap_small_acc(const bic_ctx_t ctx) {
     for (uint16_t l = 0; l < c->cols; l++) {
       uint32_t lower_s, upper_s;
       if (small_acc_get_bounds(j, l, &lower_s, &upper_s, ctx) != 0) {
-        printf("%5d ", -1);
         continue;
       }
-      uint32_t access_sum = 0;
       for (uint32_t s = lower_s; s < upper_s; ++s) {
-        access_sum +=
+        uint32_t val =
             show((size_t)(small_acc_get_val_ptr(j, l, s, ctx) - c->data));
+        printf("%u %u %u %u\n", s, j, l, val);
       }
-      printf("%5u ", access_sum);
     }
-    printf("\n");
   }
 }
 

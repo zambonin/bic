@@ -265,7 +265,7 @@ uint8_t acc_build_cache(const uint16_t n, const uint16_t k, const uint16_t d,
 
   c->rows = n + 1;
   c->cols = k;
-  c->depth = d + 2;
+  c->depth = d;
   c->d = d;
 
   c->meta = (bic_meta_t *)calloc(c->rows * c->cols, sizeof(bic_meta_t));
@@ -345,7 +345,7 @@ uint8_t small_acc_build_cache(const uint16_t n, const uint16_t k,
   cache_t *c = ctx->small_acc_cache = (cache_t *)malloc(sizeof(cache_t));
 
   c->rows = k + 1;
-  c->cols = d + 1;
+  c->cols = d;
   c->depth = 0;
 
   c->meta = (bic_meta_t *)calloc(c->rows * c->cols, sizeof(bic_meta_t));
@@ -365,14 +365,17 @@ uint8_t small_acc_build_cache(const uint16_t n, const uint16_t k,
       }
       uintx *const slice = &c->data[m.offset];
 
-      uintx sum = 0;
-      for (uint16_t i = 0; i < m.base + 1; ++i) {
-        sum += ctx->comp(m.base - i, row, d, ctx);
+      uintx base_sum = 0;
+      for (uint16_t i = 0; i < col; ++i) {
+        base_sum += ctx->comp(m.base - i, row, d, ctx);
       }
-      slice[0] = sum;
+      slice[0] = base_sum;
 
-      for (uint16_t l = 1; l < m.length; ++l) {
-        slice[l] = slice[l - 1] + ctx->comp(m.base + l, row, d, ctx);
+      for (uint16_t idx = 1; idx < m.length; ++idx) {
+        uint16_t n_curr = m.base + idx;
+        uintx add = ctx->comp(n_curr, row, d, ctx);
+        uintx sub = (n_curr >= col) ? ctx->comp(n_curr - col, row, d, ctx) : 0;
+        slice[idx] = slice[idx - 1] + add - sub;
       }
     }
   }
@@ -499,7 +502,7 @@ uint8_t build_cache_rec(const bic_cache_t type, const uint16_t n,
   case BIC_CACHE_ACC:
     return acc_build_cache(n, k, d, ctx);
   case BIC_CACHE_SMALL_ACC:
-    if (ctx->unrank_alg == BIC_ALG_AD) {
+    if (ctx->unrank_alg != BIC_ALG_AD) {
       return 0;
     }
     return small_acc_build_cache(n, k, d, ctx);
