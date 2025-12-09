@@ -44,3 +44,5 @@ $(TARGETS): %: %.o $(LIBEXTRA)
 clean:
 	$(RM) $(OUT) $(wildcard src/*.o src/order/*.o src/cache/*.o) $(wildcard bin/*.o) \
 		$(LIB) $(LIBEXTRA) $(TARGETS) $(PRIMES)
+
+include Makefile.figures
