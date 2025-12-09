@@ -1,0 +1,28 @@
+CLEAN_EXTS_DAT := *.dat
+CLEAN_EXTS_TEX := *.aux *.log *.fls *.fdb_latexmk *.synctex.gz *.synctex \
+		  *.png *.pdf
+
+%.png: %.dat %.gp
+	gnuplot -c $(word 2, $^) < $< > $@
+
+%.tex: %.dat %.cairo.gp
+	gnuplot -c $(word 2, $^) $< $@
+
+%.pdf: %.tex
+	TEXINPUTS=.:$(dir $<): latexmk -f -interaction=nonstopmode -shell-escape \
+		-pdf -use-make -outdir=$(dir $<) $<
+
+EXP_DIRS :=
+
+include exp/cache-access-pattern/Makefile
+include exp/cache-size/Makefile
+include exp/perf-ranking/Makefile
+include exp/visual-order/Makefile
+
+figures: cache-access-pattern cache-size perf-unranking visual-order
+
+clean-data:
+	$(foreach dir,$(EXP_DIRS),$(RM) $(addprefix $(dir)/,$(CLEAN_EXTS_DAT)))
+
+clean-figures:
+	$(foreach dir,$(EXP_DIRS),$(RM) $(addprefix $(dir)/,$(CLEAN_EXTS_TEX)))

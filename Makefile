@@ -51,4 +51,7 @@ test: bin/test
 
 clean:
 	$(RM) $(OUT) $(wildcard src/*.o) $(wildcard bin/*.o) $(LIB) $(TARGETS) \
-		$(PRIMES)
+		$(LIBEXTRA) $(PRIMES)
+
+include Makefile.figures
+include Makefile.regression
