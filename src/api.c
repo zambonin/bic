@@ -4,6 +4,7 @@
 #include "gray.h"
 #include "rbo.h"
 #include "search.h"
+#include "spiral.h"
 #include "strat.h"
 
 typedef struct {
@@ -91,6 +92,11 @@ uint8_t bic_ctx_set_order(const uint8_t order, bic_ctx_t ctx) {
     ctx->unrank = rbo_unrank;
     ctx->rank = rbo_rank;
     break;
+  case BIC_ORDER_SPIRAL:
+    ctx->unrank = spiral_unrank;
+    ctx->rank = spiral_rank;
+    break;
+
   default:
     return 1;
   }
