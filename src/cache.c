@@ -138,14 +138,27 @@ size_t scomb_cache_length(const uint16_t rows, const uint16_t cols,
   const uint16_t k = cols + 1;
 
   for (uint16_t col = 0; col < cols; ++col) {
-    const double mean = exp_part_sum(n, k, d, col + 1, 0, ctx);
-    const double stddev = stddev_part_sum(n, k, d, col + 1, 0, ctx);
-    const uint16_t left = max((int32_t)(mean - level * stddev), 0);
-    const uint16_t right = min((int32_t)(mean + level * stddev), n);
+    const uint16_t kp = col + 1;
+    const uint16_t kp_next = kp + 1;
+
+    const double mean_target =
+        (kp_next >= k) ? (double)n : exp_part_sum(n, k, d, kp_next, 0, ctx);
+    const double std_target =
+        (kp_next >= k) ? 0.0 : stddev_part_sum(n, k, d, kp_next, 0, ctx);
+
+    const double mean_curr = exp_part_sum(n, k, d, kp, 0, ctx);
+    const double std_curr = stddev_part_sum(n, k, d, kp, 0, ctx);
+
+    int32_t left = (int32_t)(mean_curr - level * std_curr);
+    int32_t right = (int32_t)(mean_target + level * std_target);
+
+    left = max(left, 0);
+    right = max(min(right, (int32_t)n), left);
+
     const uint16_t length = (right >= left) ? (right - left + 1) : 0;
 
     if (meta != NULL) {
-      meta[col].base = left;
+      meta[col].base = (uint16_t)left;
       meta[col].length = length;
       meta[col].offset = total;
     }
