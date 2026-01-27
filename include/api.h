@@ -23,6 +23,7 @@ static const char *bic_order_names[BIC_ORDER_LENGTH] = {
     "colex",
     "gray",
     "rbo",
+    "spiral",
 };
 static const find_ctx_t bic_order_find_ctx = {
     .names = bic_order_names,

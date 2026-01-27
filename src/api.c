@@ -3,6 +3,7 @@
 #include "order/colex.h"
 #include "order/gray.h"
 #include "order/rbo.h"
+#include "order/spiral.h"
 #include "search.h"
 #include "strat.h"
 
@@ -89,11 +90,16 @@ uint8_t bic_ctx_set_order(const uint8_t order, bic_ctx_t ctx) {
     ctx->unrank = rbo_unrank;
     ctx->rank = rbo_rank;
     break;
+  case BIC_ORDER_SPIRAL:
+    ctx->unrank = spiral_unrank;
+    ctx->rank = spiral_rank;
+    break;
   default:
     return 1;
   }
 
   ctx->order = (bic_order_t)order;
+  ctx->unrank_alg = BIC_ALG_DEFAULT;
   return 0;
 }
 
