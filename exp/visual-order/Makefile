@@ -1,7 +1,7 @@
 VISUAL_DIR := exp/visual-order
 EXP_DIRS += $(VISUAL_DIR)
 
-VISUAL_ORDERS := colex gray rbo spiral
+VISUAL_ORDERS := colex gray rbo spiral bous
 
 define VISUAL_RULE
 $(VISUAL_DIR)/visual-order-comparison-$(1).dat: bin/enum
