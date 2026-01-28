@@ -8,6 +8,7 @@
 \pgfplotstableread{visual-order-comparison-gray.dat}{\grayfile}
 \pgfplotstableread{visual-order-comparison-rbo.dat}{\rbofile}
 \pgfplotstableread{visual-order-comparison-spiral.dat}{\spiralfile}
+\pgfplotstableread{visual-order-comparison-bous.dat}{\bousfile}
 
 \makeatletter
 \tikzset{
@@ -47,5 +48,6 @@
 \drawgrid[cell ht=.2em, cell wd=.2em]{\grayfile}
 \drawgrid[cell ht=.2em, cell wd=.2em]{\rbofile}
 \drawgrid[cell ht=.2em, cell wd=.2em]{\spiralfile}
+\drawgrid[cell ht=.2em, cell wd=.2em]{\bousfile}
 
 \end{document}

@@ -20,10 +20,7 @@ uint8_t bic_ctx_set_order(const uint8_t order, bic_ctx_t ctx);
 uint8_t bic_ctx_set_order_by_name(const char *name, bic_ctx_t ctx);
 
 static const char *bic_order_names[BIC_ORDER_LENGTH] = {
-    "colex",
-    "gray",
-    "rbo",
-    "spiral",
+    "colex", "gray", "rbo", "spiral", "bous",
 };
 static const find_ctx_t bic_order_find_ctx = {
     .names = bic_order_names,
