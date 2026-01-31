@@ -27,18 +27,18 @@ bool min_n(const uint32_t val, const void *ctx) {
 }
 
 void mingen(const uint32_t m, uint32_t *n, const uint32_t k, uint32_t *d) {
-  if (k <= 1 || (m >= ((k - 1) * (16 - lg(k - 1))))) {
+  if (k <= 1 || (m >= ((k - 1) * (32 - lg(k - 1))))) {
     return;
   }
 
   param_ctx_t c = {.m = m, .k = k, .v = d};
-  linear_search(d, 0, UINT16_MAX, unimodal, &c);
-  if (*d == UINT16_MAX) {
+  exponential_search(d, 0, UINT32_MAX, unimodal, &c);
+  if (*d == UINT32_MAX) {
     *n = UINT32_MAX;
     return;
   }
   uint64_t hi_long = ((uint64_t)k * *d + 1) / 2;
-  linear_search(n, 0, (uint32_t)hi_long, min_n, &c);
+  exponential_search(n, 0, (uint32_t)hi_long, min_n, &c);
 }
 
 bool unbounded_parts(const uint32_t val, const void *ctx) {
@@ -52,17 +52,17 @@ bool min_d(const uint32_t val, const void *ctx) {
 }
 
 void minver(const uint32_t m, uint32_t *n, const uint32_t k, uint32_t *d) {
-  if (k <= 1 || (m >= ((k - 1) * (16 - lg(k - 1))))) {
+  if (k <= 1 || (m >= ((k - 1) * (32 - lg(k - 1))))) {
     return;
   }
 
   param_ctx_t c = {.m = m, .k = k, .v = n};
-  linear_search(n, 0, UINT16_MAX, unbounded_parts, &c);
-  if (*n == UINT16_MAX) {
+  exponential_search(n, 0, UINT32_MAX, unbounded_parts, &c);
+  if (*n == UINT32_MAX) {
     *d = UINT32_MAX;
     return;
   }
-  linear_search(d, 0, *n, min_d, &c);
+  exponential_search(d, 0, *n, min_d, &c);
 }
 
 void gen_params_random(const uint32_t m, uint32_t *n, const uint32_t k,
