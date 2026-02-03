@@ -30,7 +30,7 @@ uintx bin_access(const uint32_t row, const uint32_t col, const bic_ctx_t ctx) {
   return g_acc_ctx.bin(row, col, ctx);
 }
 
-uintx comp_access(const uint16_t row, const uint16_t col, const uint16_t d,
+uintx comp_access(const uint32_t row, const uint32_t col, const uint32_t d,
                   const bic_ctx_t ctx) {
   if (ctx->cache_type == BIC_CACHE_COMB) {
     uintx *ptr = comb_cache_get_ptr(row, col, ctx);
@@ -48,8 +48,8 @@ uintx comp_access(const uint16_t row, const uint16_t col, const uint16_t d,
   return g_acc_ctx.comp(row, col, d, ctx);
 }
 
-uintx *small_acc_get_val_ptr(const uint16_t j, const uint16_t l,
-                             const uint16_t s, const bic_ctx_t ctx) {
+uintx *small_acc_get_val_ptr(const uint32_t j, const uint32_t l,
+                             const uint32_t s, const bic_ctx_t ctx) {
   const cache_t *c = ctx->small_acc_cache;
   if (c == NULL || j >= c->rows || l >= c->cols)
     return NULL;
@@ -62,10 +62,10 @@ uintx *small_acc_get_val_ptr(const uint16_t j, const uint16_t l,
   return &c->data[m.offset + (s - m.base)];
 }
 
-uint16_t acc_access(uintx *rop, const uint16_t row, const uint16_t col,
-                    const uint16_t d, const bic_ctx_t ctx) {
+uint16_t acc_access(uintx *rop, const uint32_t row, const uint32_t col,
+                    const uint32_t d, const bic_ctx_t ctx) {
   if (ctx->cache_type == BIC_CACHE_ACC) {
-    uint16_t len = 0;
+    uint32_t len = 0;
     uintx *ptr = acc_cache_get_ptr(row, col, &len, ctx);
     if (ptr != NULL) {
       const size_t index = ptr - ctx->acc_cache->data;
@@ -77,10 +77,10 @@ uint16_t acc_access(uintx *rop, const uint16_t row, const uint16_t col,
   return g_acc_ctx.acc(rop, row, col, d, ctx);
 }
 
-uintx dir_access(const uint16_t row, const uint16_t col, const uint16_t d,
-                 const uint16_t l, const bic_ctx_t ctx) {
+uintx dir_access(const uint32_t row, const uint32_t col, const uint32_t d,
+                 const uint32_t l, const bic_ctx_t ctx) {
   if (ctx->cache_type == BIC_CACHE_ACC) {
-    uint16_t len = 0;
+    uint32_t len = 0;
     uintx *ptr = acc_cache_get_ptr(row, col, &len, ctx);
     if (ptr != NULL && l < len) {
       const size_t index = ptr - ctx->acc_cache->data;
@@ -147,7 +147,7 @@ void print_cache_heatmap_acc(const bic_ctx_t ctx) {
   const cache_t *c = ctx->acc_cache;
   for (uint32_t row = 0; row < c->rows; row++) {
     for (uint32_t col = 0; col < c->cols; col++) {
-      uint16_t len = 0;
+      uint32_t len = 0;
       uintx *ptr = acc_cache_get_ptr(row, col, &len, ctx);
       if (ptr == NULL) {
         continue;
@@ -169,8 +169,8 @@ void print_cache_heatmap_acc(const bic_ctx_t ctx) {
 
 void print_cache_heatmap_small_acc(const bic_ctx_t ctx) {
   const cache_t *c = ctx->small_acc_cache;
-  for (uint16_t j = 1; j < c->rows; j++) {
-    for (uint16_t l = 0; l < c->cols; l++) {
+  for (uint32_t j = 1; j < c->rows; j++) {
+    for (uint32_t l = 0; l < c->cols; l++) {
       uint32_t lower_s, upper_s;
       if (small_acc_get_bounds(j, l, &lower_s, &upper_s, ctx) != 0) {
         continue;
@@ -252,12 +252,13 @@ void free_counters() { free(g_acc_ctx.access); }
 
 int32_t main(int32_t argc, char **argv) {
   bool error = false;
-  uint16_t n = 0;
-  uint16_t k = 0;
-  uint16_t d = 0;
-  uint16_t m = 0;
+  uint32_t n = 0;
+  uint32_t k = 0;
+  uint32_t d = 0;
+  uint32_t m = 0;
   char *order = (char *)"colex";
-  char *algorithm = (char *)"default";
+  char *unrank_alg = (char *)"default";
+  char *rank_alg = (char *)"default";
   char *cache = (char *)"";
   char *strategy = (char *)"gen";
   uint32_t iterations = 8;
@@ -269,7 +270,8 @@ int32_t main(int32_t argc, char **argv) {
       {&opt_bound, &d},
       {&opt_target, &m},
       {&opt_order, &order},
-      {&opt_algorithm, &algorithm},
+      {&opt_unrank_alg, &unrank_alg},
+      {&opt_rank_alg, &rank_alg},
       {&opt_cache, &cache},
       {&opt_strategy, &strategy},
       {&opt_iterations, &iterations},
@@ -285,7 +287,8 @@ int32_t main(int32_t argc, char **argv) {
 
   if (k == 0 || ctx == NULL || (uint64_t)n > (uint64_t)k * d ||
       bic_ctx_set_order_by_name(order, ctx) ||
-      bic_ctx_set_unrank_alg_by_name(algorithm, ctx) ||
+      bic_ctx_set_unrank_alg_by_name(unrank_alg, ctx) ||
+      bic_ctx_set_rank_alg_by_name(rank_alg, ctx) ||
       bic_ctx_set_cache_by_name(cache, ctx) ||
       bic_ctx_set_strategy_by_name(strategy, ctx)) {
     print_help(argv[0], options);

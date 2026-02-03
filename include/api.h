@@ -20,7 +20,7 @@ uint8_t bic_ctx_set_order(const uint8_t order, bic_ctx_t ctx);
 uint8_t bic_ctx_set_order_by_name(const char *name, bic_ctx_t ctx);
 
 static const char *bic_order_names[BIC_ORDER_LENGTH] = {
-    "colex", "gray", "rbo", "spiral", "bous",
+    "colex", "gray", "rbo", "rbo-mo", "spiral", "bous",
 };
 static const find_ctx_t bic_order_find_ctx = {
     .names = bic_order_names,
@@ -32,13 +32,13 @@ uint8_t bic_ctx_set_unrank_alg(const uint8_t alg, bic_ctx_t ctx);
 
 uint8_t bic_ctx_set_unrank_alg_by_name(const char *name, bic_ctx_t ctx);
 
-static const char *bic_unrank_alg_names[BIC_ALG_LENGTH] = {
-    "default", "ps", "al", "ab", "ad",
+static const char *bic_unrank_alg_names[BIC_UNRANK_ALG_LENGTH] = {
+    "default", "ps", "al", "ab", "ad", "generic",
 };
 static const find_ctx_t bic_unrank_alg_find_ctx = {
     .names = bic_unrank_alg_names,
     .setter = bic_ctx_set_unrank_alg,
-    .length = BIC_ALG_LENGTH,
+    .length = BIC_UNRANK_ALG_LENGTH,
 };
 
 uint8_t bic_ctx_set_cache(const uint8_t cache, bic_ctx_t ctx);
@@ -53,6 +53,12 @@ static const find_ctx_t bic_cache_find_ctx = {
     .setter = bic_ctx_set_cache,
     .length = BIC_CACHE_LENGTH,
 };
+
+extern const char *bic_rank_alg_names[BIC_RANK_ALG_LENGTH];
+
+uint8_t bic_ctx_set_rank_alg(const uint8_t alg, bic_ctx_t ctx);
+
+uint8_t bic_ctx_set_rank_alg_by_name(const char *name, bic_ctx_t ctx);
 
 uint8_t bic_ctx_set_strategy(const uint8_t strategy, bic_ctx_t ctx);
 
@@ -71,18 +77,18 @@ static const find_ctx_t bic_strategy_find_ctx = {
 
 uint8_t bic_ctx_set_defaults(bic_ctx_t ctx);
 
-void bic_run_strategy(const uint16_t m, uint16_t *n, const uint16_t k,
-                      uint16_t *d, const bic_ctx_t ctx);
+void bic_run_strategy(const uint32_t m, uint32_t *n, const uint32_t k,
+                      uint32_t *d, const bic_ctx_t ctx);
 
-void bic_unrank(uint32_t *rop, const uint16_t n, const uint16_t k,
-                const uint16_t d, const uintx r, const bic_ctx_t ctx);
+void bic_unrank(uint32_t *rop, const uint32_t n, const uint32_t k,
+                const uint32_t d, const uintx r, const bic_ctx_t ctx);
 
-uintx bic_rank(const uint16_t n, const uint16_t k, const uint16_t d,
+uintx bic_rank(const uint32_t n, const uint32_t k, const uint32_t d,
                const uint32_t *comp, const bic_ctx_t ctx);
 
-uint8_t bic_precompute(const uint16_t n, const uint16_t k, const uint16_t d,
+uint8_t bic_precompute(const uint32_t n, const uint32_t k, const uint32_t d,
                        bic_ctx_t ctx);
 
 void bic_free_precomputed(bic_ctx_t ctx);
 
-#endif // API_H
+#endif

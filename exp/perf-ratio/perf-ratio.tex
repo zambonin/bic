@@ -1,0 +1,47 @@
+\documentclass[tikz]{standalone}
+
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=1.18}
+
+\begin{document}
+
+\pgfplotstableread{perf-ratio.dat}\newdata
+
+\begin{tikzpicture}[scale = 2]
+  \begin{semilogyaxis}[
+    height = 6cm, width = 10cm, scale only axis,
+    xlabel = { Ratio $n / (kd/2)$ },
+    ylabel = { CPU cycles },
+    cycle list name = color list,
+    legend pos = outer north east,
+    legend style = {
+      legend columns = 1, font = \small, draw = none, fill = none,
+      legend cell align = left, legend image code/.code = {
+        \draw[mark repeat = 2, mark phase = 2]
+          plot coordinates { (0cm, 0cm) (0.1cm, 0cm) (0.2cm, 0cm) };
+      },
+    },
+  ]
+
+  \addplot+[mark = none, thick] table [x=ratio, y=colex] {\newdata};
+  \addlegendentry{colex}
+
+  \addplot+[mark = none, thick] table [x=ratio, y=spiral] {\newdata};
+  \addlegendentry{spiral}
+
+  \addplot+[mark = none, thick] table [x=ratio, y=rbo] {\newdata};
+  \addlegendentry{rbo}
+
+  \addplot+[mark = none, thick] table [x=ratio, y=rbo-mo] {\newdata};
+  \addlegendentry{rbo-mo}
+
+  \addplot+[mark = none, thick] table [x=ratio, y=gray] {\newdata};
+  \addlegendentry{gray}
+
+  \addplot+[mark = none, thick] table [x=ratio, y=bous] {\newdata};
+  \addlegendentry{bous}
+
+  \end{semilogyaxis}
+\end{tikzpicture}
+
+\end{document}

@@ -14,6 +14,14 @@
 │    algorithms and counts how many times each cache entry is accessed.      │
 │    Then, it prints a heatmap of the cache accesses.                        │
 │                                                                            │
+│  * `bin/cache-size.c`: a program to compare cache storage requirements     │
+│    across different cache types (`bin`, `comb`, `scomb`, `acc`, `sacc`)    │
+│    and stddev levels. Reports memory savings as percentages.               │
+│                                                                            │
+│  * `bin/cache-sparse-size.c`: a program to compare dense vs sparse cache   │
+│    sizes for RBO/boustrophedonic orders. Demonstrates the halving set      │
+│    column optimization savings for `comb`, `acc`, and `scomb` caches.      │
+│                                                                            │
 │  * `bin/cli.c`: a simple CLI to test the available algorithms. It will     │
 │    unrank a random integer to a composition and rank it back, showing      │
 │    performance stats and other information.                                │
@@ -21,11 +29,29 @@
 │  * `bin/enum.c`: a program to enumerate all possible compositions for a    │
 │    given `n`, `k`, and `d`.                                                │
 │                                                                            │
+│  * `bin/iwoca.c`: experiment runner for IWOCA 2026 paper. Produces         │
+│    machine-readable CSV output with performance and storage measurements   │
+│    across multiple parameter sets, orders, algorithms, and cache types.    │
+│                                                                            │
 │  * `bin/perf.c`: a program to measure the performance of the different     │
 │    (un)ranking algorithms, orders, and cache types. It iterates through a  │
 │    range of `k` values and measures the CPU cycles for each combination.   │
 │    The output is a table that can be used to compare the performance of    │
 │    the different configurations.                                           │
+│                                                                            │
+│  * `bin/ratio-n-kd.c`: a program to benchmark unranking performance as     │
+│    a function of n/kd ratio (0.05 to 2.0). Compares all orders at fixed    │
+│    k=32, d=255 to show how order performance varies with composition       │
+│    density.                                                                │
+│                                                                            │
+│  * `bin/rte.c`: rank-then-encrypt (RTE) test harness. Simulates a simple   │
+│    XOR-based encryption/decryption round-trip using ranking as the         │
+│    bijective mapping. Tests real-world parameter sets (e.g., 10x10 image,  │
+│    salaries, ratings).                                                     │
+│                                                                            │
+│  * `bin/seq.c`: exhaustive sequential test over small parameter ranges.    │
+│    Iterates through all `n`, `k`, `d` in [0, 10) for every order,          │
+│    algorithm, and cache type to verify correctness on edge cases.          │
 │                                                                            │
 │  * `bin/test.c`: a test suite for combinations of API configurations,      │
 │    which generates random parameters and runs a single round trip of       │

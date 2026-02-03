@@ -28,21 +28,21 @@ static const uint32_t NS_TO_SEC = 1000000000;
 
 uint64_t cycles(void);
 
-uint16_t bits_fit_bic(const uint16_t n, const uint16_t k, const uint16_t d);
+uint16_t bits_fit_bic(const uint32_t n, const uint32_t k, const uint32_t d);
 
-uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d);
+uintx random_rank(const uint32_t n, const uint32_t k, const uint32_t d);
 
 uintx import_from_unsigned_char(const uint8_t *bytes, const size_t len);
 
-void bic_run_round_trips(const uint16_t n, const uint16_t k, const uint16_t d,
+void bic_run_round_trips(const uint32_t n, const uint32_t k, const uint32_t d,
                          const uint32_t iterations, long double *utime,
                          long double *ucycles, long double *rtime,
                          long double *rcycles, const bic_ctx_t ctx);
 
-void bic_run_single_round_trip(const uint16_t n, const uint16_t k,
-                               const uint16_t d, const bic_ctx_t ctx);
+void bic_run_single_round_trip(const uint32_t n, const uint32_t k,
+                               const uint32_t d, const bic_ctx_t ctx);
 
-void bic_print_config(const uint16_t n, const uint16_t k, const uint16_t d,
+void bic_print_config(const uint32_t n, const uint32_t k, const uint32_t d,
                       const bic_ctx_t ctx);
 
 void bic_print_perf_stats(const uint32_t it, const long double utime,
@@ -77,8 +77,8 @@ void print_help(const char *name, cli_option_t options[]);
 static const cli_option_def_t opt_sum = {
     .opt = {"sum", required_argument, 0, 'n'},
     .description = "Target sum.",
-    .type_description = "uint16_t",
-    .parser = parse_uint16,
+    .type_description = "uint32_t",
+    .parser = parse_uint32,
     .sub_option_names = NULL,
     .sub_option_infos = NULL,
     .num_sub_options = 0,
@@ -87,8 +87,8 @@ static const cli_option_def_t opt_sum = {
 static const cli_option_def_t opt_parts = {
     .opt = {"parts", required_argument, 0, 'k'},
     .description = "Number of parts.",
-    .type_description = "uint16_t",
-    .parser = parse_uint16,
+    .type_description = "uint32_t",
+    .parser = parse_uint32,
     .sub_option_names = NULL,
     .sub_option_infos = NULL,
     .num_sub_options = 0,
@@ -97,8 +97,8 @@ static const cli_option_def_t opt_parts = {
 static const cli_option_def_t opt_bound = {
     .opt = {"bound", required_argument, 0, 'd'},
     .description = "Upper bound of each part, inclusive.",
-    .type_description = "uint16_t",
-    .parser = parse_uint16,
+    .type_description = "uint32_t",
+    .parser = parse_uint32,
     .sub_option_names = NULL,
     .sub_option_infos = NULL,
     .num_sub_options = 0,
@@ -108,6 +108,7 @@ static const char *bic_order_sub_options[BIC_ORDER_LENGTH] = {
     "co-lexicographic order",
     "strong minimal-change Gray order",
     "recursive block order due to Miracle-Yilek",
+    "recursive block order with middle-out traversal",
     "spiral order centered on mean",
     "boustrophedonic order",
 };
@@ -122,7 +123,7 @@ static const cli_option_def_t opt_order = {
     .num_sub_options = BIC_ORDER_LENGTH,
 };
 
-static const char *bic_unrank_alg_sub_options[BIC_ALG_LENGTH] = {
+static const char *bic_unrank_alg_sub_options[BIC_UNRANK_ALG_LENGTH] = {
     "linear search over #C(n, k, d) calculated on demand",
     "linear search reusing partial sums of a single #C(n, k, d)",
     "linear search over a pre-calculated array of accumulated sums of #C(n, k, "
@@ -131,16 +132,33 @@ static const char *bic_unrank_alg_sub_options[BIC_ALG_LENGTH] = {
     "d)",
     "binary search over accumulated sums of #C(n, k, d) calculated directly on "
     "demand",
+    "recursive divide-and-conquer with pluggable iteration strategy",
 };
 
-static const cli_option_def_t opt_algorithm = {
-    .opt = {"algorithm", required_argument, 0, 'a'},
+static const cli_option_def_t opt_unrank_alg = {
+    .opt = {"unrank_alg", required_argument, 0, 'a'},
     .description = "Specific unranking strategy for `colex` order.",
     .type_description = "alg",
     .parser = parse_string,
     .sub_option_names = bic_unrank_alg_names,
     .sub_option_infos = bic_unrank_alg_sub_options,
-    .num_sub_options = BIC_ALG_LENGTH,
+    .num_sub_options = BIC_UNRANK_ALG_LENGTH,
+};
+
+static const char *bic_rank_alg_sub_options[BIC_RANK_ALG_LENGTH] = {
+    "inverse of the default unranking algorithm",
+    "inverse of the generic unranking algorithm",
+    "direct calculation of rank using binomial coefficients",
+};
+
+static const cli_option_def_t opt_rank_alg = {
+    .opt = {"rank_alg", required_argument, 0, 'R'},
+    .description = "Specific ranking strategy.",
+    .type_description = "alg",
+    .parser = parse_string,
+    .sub_option_names = bic_rank_alg_names,
+    .sub_option_infos = bic_rank_alg_sub_options,
+    .num_sub_options = BIC_RANK_ALG_LENGTH,
 };
 
 static const cli_option_def_t opt_iterations = {
@@ -175,8 +193,8 @@ static const cli_option_def_t opt_cache = {
 static const cli_option_def_t opt_target = {
     .opt = {"target", required_argument, 0, 'm'},
     .description = "Target security level, in bits.",
-    .type_description = "uint16_t",
-    .parser = parse_uint16,
+    .type_description = "uint32_t",
+    .parser = parse_uint32,
     .sub_option_names = NULL,
     .sub_option_infos = NULL,
     .num_sub_options = 0,
@@ -208,4 +226,4 @@ static const cli_option_def_t opt_randomness = {
     .num_sub_options = 0,
 };
 
-#endif // EXTRA_H
+#endif

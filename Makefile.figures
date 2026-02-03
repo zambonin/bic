@@ -17,6 +17,8 @@ EXP_DIRS :=
 include exp/cache-access-pattern/Makefile
 include exp/cache-size/Makefile
 include exp/perf-ranking/Makefile
+include exp/perf-ranking-generic/Makefile
+include exp/perf-ratio/Makefile
 include exp/visual-order/Makefile
 
 figures: cache-access-pattern cache-size perf-unranking visual-order

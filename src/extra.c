@@ -4,7 +4,6 @@
 
 #include "extra.h"
 
-// https://github.com/sphincs/sphincsplus/blob/7ec789ac/ref/test/cycles.c
 uint64_t cycles(void) {
   uint64_t result = 0;
   __asm volatile(".byte 15;.byte 49;shlq $32,%%rdx;orq %%rdx,%%rax"
@@ -12,21 +11,21 @@ uint64_t cycles(void) {
   return result;
 }
 
-void check_valid_bounded_composition(const uint32_t *c, const uint16_t n,
-                                     const uint16_t k, const uint16_t d) {
+void check_valid_bounded_composition(const uint32_t *c, const uint32_t n,
+                                     const uint32_t k, const uint32_t d) {
   uint32_t sum = 0;
-  for (uint16_t i = 0; i < k; ++i) {
+  for (uint32_t i = 0; i < k; ++i) {
     assert(c[i] <= d);
     sum += c[i];
   }
   assert(sum == n);
 }
 
-uint16_t bits_fit_bic(const uint16_t n, const uint16_t k, const uint16_t d) {
+uint16_t bits_fit_bic(const uint32_t n, const uint32_t k, const uint32_t d) {
   return 1 + ((uint16_t)lg(compute_bic_no_cache(n, k, d)));
 }
 
-uintx random_rank(const uint16_t n, const uint16_t k, const uint16_t d) {
+uintx random_rank(const uint32_t n, const uint32_t k, const uint32_t d) {
   uint16_t len = bits_fit_bic(n, k, d) / sizeof(uint64_t);
   len += (len == 0);
 
@@ -62,7 +61,7 @@ uintx import_from_unsigned_char(const uint8_t *bytes, const size_t len) {
   return rop;
 }
 
-void bic_run_round_trips(const uint16_t n, const uint16_t k, const uint16_t d,
+void bic_run_round_trips(const uint32_t n, const uint32_t k, const uint32_t d,
                          const uint32_t iterations, long double *utime,
                          long double *ucycles, long double *rtime,
                          long double *rcycles, const bic_ctx_t ctx) {
@@ -105,12 +104,12 @@ void bic_run_round_trips(const uint16_t n, const uint16_t k, const uint16_t d,
   free(comp);
 }
 
-void bic_run_single_round_trip(const uint16_t n, const uint16_t k,
-                               const uint16_t d, const bic_ctx_t ctx) {
+void bic_run_single_round_trip(const uint32_t n, const uint32_t k,
+                               const uint32_t d, const bic_ctx_t ctx) {
   bic_run_round_trips(n, k, d, 1, NULL, NULL, NULL, NULL, ctx);
 }
 
-void bic_print_config(const uint16_t n, const uint16_t k, const uint16_t d,
+void bic_print_config(const uint32_t n, const uint32_t k, const uint32_t d,
                       const bic_ctx_t ctx) {
   const char *cache_name = bic_cache_names[ctx->cache_type];
   const char *order_name = bic_order_names[ctx->order];

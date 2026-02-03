@@ -7,6 +7,7 @@ typedef enum {
   BIC_ORDER_COLEX,
   BIC_ORDER_GRAY,
   BIC_ORDER_RBO,
+  BIC_ORDER_RBO_MO,
   BIC_ORDER_SPIRAL,
   BIC_ORDER_BOUS,
   BIC_ORDER_LENGTH,
@@ -18,7 +19,8 @@ typedef enum {
   BIC_ALG_AL,
   BIC_ALG_AB,
   BIC_ALG_AD,
-  BIC_ALG_LENGTH,
+  BIC_ALG_GENERIC,
+  BIC_UNRANK_ALG_LENGTH,
 } bic_unrank_alg_t;
 
 typedef enum {
@@ -48,6 +50,8 @@ typedef struct cache_s {
   uintx *data;
   uint32_t rows;
   uint32_t cols;
+  int16_t *col_map;
+  uint32_t col_map_size;
   uint32_t d;
   uint32_t depth;
   bic_cache_t prereq;
@@ -55,34 +59,42 @@ typedef struct cache_s {
   bic_meta_t *meta;
 } cache_t;
 
-typedef void (*bic_unrank_func_t)(uint32_t *rop, const uint16_t n,
-                                  const uint16_t k, const uint16_t d,
+typedef void (*bic_unrank_func_t)(uint32_t *rop, const uint32_t n,
+                                  const uint32_t k, const uint32_t d,
                                   const uintx r, const bic_ctx_t ctx);
 
-typedef uintx (*bic_rank_func_t)(const uint16_t n, const uint16_t k,
-                                 const uint16_t d, const uint32_t *comp,
+typedef uintx (*bic_rank_func_t)(const uint32_t n, const uint32_t k,
+                                 const uint32_t d, const uint32_t *comp,
                                  const bic_ctx_t ctx);
 
-typedef void (*bic_strategy_func_t)(const uint16_t m, uint16_t *n,
-                                    const uint16_t k, uint16_t *d);
+typedef void (*bic_strategy_func_t)(const uint32_t m, uint32_t *n,
+                                    const uint32_t k, uint32_t *d);
 
 typedef uintx (*bic_math_bin_func_t)(const uint32_t n, const uint32_t k,
                                      const bic_ctx_t ctx);
 
-typedef uintx (*bic_math_comp_func_t)(const uint16_t n, const uint16_t k,
-                                      const uint16_t d, const bic_ctx_t ctx);
+typedef uintx (*bic_math_comp_func_t)(const uint32_t n, const uint32_t k,
+                                      const uint32_t d, const bic_ctx_t ctx);
 
-typedef uint16_t (*bic_math_acc_func_t)(uintx *rop, const uint16_t n,
-                                        const uint16_t k, const uint16_t d,
+typedef uint16_t (*bic_math_acc_func_t)(uintx *rop, const uint32_t n,
+                                        const uint32_t k, const uint32_t d,
                                         const bic_ctx_t ctx);
 
-typedef uintx (*bic_math_dir_func_t)(const uint16_t n, const uint16_t k,
-                                     const uint16_t d, const uint16_t l,
+typedef uintx (*bic_math_dir_func_t)(const uint32_t n, const uint32_t k,
+                                     const uint32_t d, const uint32_t l,
                                      const bic_ctx_t ctx);
+
+typedef enum {
+  BIC_RANK_ALG_DEFAULT = 0,
+  BIC_RANK_ALG_GENERIC = 1,
+  BIC_RANK_ALG_AD = 2,
+  BIC_RANK_ALG_LENGTH,
+} bic_rank_alg_t;
 
 struct bic_ctx_s {
   bic_order_t order;
   bic_unrank_alg_t unrank_alg;
+  bic_rank_alg_t rank_alg;
   bic_cache_t cache_type;
   bic_strategy_t strategy;
 
@@ -104,4 +116,4 @@ struct bic_ctx_s {
   uint8_t scomb_cache_stddev_level;
 };
 
-#endif // TYPES_H
+#endif

@@ -6,11 +6,11 @@
 #include "cache.h"
 #include "extra.h"
 
-static const uint16_t SMALL = 64;
+static const uint32_t SMALL = 64;
 
-uint16_t uniform_1_to_64(void) { return (random() % SMALL) + 1; }
+uint32_t uniform_1_to_64(void) { return (random() % SMALL) + 1; }
 
-void gen_small_params_random(uint16_t *n, uint16_t *k, uint16_t *d) {
+void gen_small_params_random(uint32_t *n, uint32_t *k, uint32_t *d) {
   *k = uniform_1_to_64();
   *d = uniform_1_to_64();
   *n = (*k * *d + 1) / 2;
@@ -54,9 +54,9 @@ int32_t main(int32_t argc, char **argv) {
   printf("n\tk\td\tstddev\tbin\tcomb\tacc\n");
 
   for (uint32_t it = 0; it < iterations; ++it) {
-    uint16_t n = 0;
-    uint16_t k = 0;
-    uint16_t d = 0;
+    uint32_t n = 0;
+    uint32_t k = 0;
+    uint32_t d = 0;
 
     gen_small_params_random(&n, &k, &d);
     bic_precompute(n, k, d, ctx);
@@ -84,11 +84,12 @@ int32_t main(int32_t argc, char **argv) {
     for (uint32_t s = 1; s <= max_stddev; ++s) {
       ctx->scomb_cache_stddev_level = s;
 
-      size_t scomb_size_val = scomb_cache_length(
-          scomb_rows, scomb_cols, d, ctx->scomb_cache_stddev_level, NULL, ctx);
-      size_t sacc_size_val =
-          small_acc_cache_length(sacc_rows, sacc_cols, n, k, d,
-                                 ctx->scomb_cache_stddev_level, NULL, ctx);
+      size_t scomb_size_val =
+          scomb_cache_length(scomb_rows, scomb_cols, k, d,
+                             ctx->scomb_cache_stddev_level, NULL, NULL, ctx);
+      size_t sacc_size_val = small_acc_cache_length(
+          sacc_rows, sacc_cols, n, k, d, ctx->scomb_cache_stddev_level, NULL,
+          NULL, ctx);
 
       double ragged_save_percent = (1.0 - (double)ragged_size / full_size);
       double scomb_save_percent = (1.0 - (double)scomb_size_val / comb_size);

@@ -26,24 +26,29 @@ int32_t main(int32_t argc, char **argv) {
 
   for (uint8_t i = 0; i < BIC_ORDER_LENGTH; i++) {
     bic_ctx_set_order(i, ctx);
-    for (uint8_t j = 0; j < BIC_ALG_LENGTH; j++) {
+    for (uint8_t j = 0; j < BIC_UNRANK_ALG_LENGTH; j++) {
       if (bic_ctx_set_unrank_alg(j, ctx)) {
         continue;
       }
-      for (uint8_t c = 0; c < BIC_CACHE_LENGTH; c++) {
-        bic_ctx_set_cache(c, ctx);
-        for (uint32_t it = 0; it < iterations; ++it) {
-          for (uint16_t n = 0; n < LIMIT; ++n) {
-            for (uint16_t k = 0; k < LIMIT; ++k) {
-              for (uint16_t d = 0; d < LIMIT; ++d) {
-                if (k * d < n) {
-                  continue;
+      for (uint8_t r = 0; r < BIC_RANK_ALG_LENGTH; r++) {
+        if (bic_ctx_set_rank_alg(r, ctx)) {
+          continue;
+        }
+        for (uint8_t c = 0; c < BIC_CACHE_LENGTH; c++) {
+          bic_ctx_set_cache(c, ctx);
+          for (uint32_t it = 0; it < iterations; ++it) {
+            for (uint16_t n = 0; n < LIMIT; ++n) {
+              for (uint16_t k = 0; k < LIMIT; ++k) {
+                for (uint16_t d = 0; d < LIMIT; ++d) {
+                  if (k * d < n) {
+                    continue;
+                  }
+                  bic_print_config(n, k, d, ctx);
+                  printf("\n");
+                  bic_precompute(n, k, d, ctx);
+                  bic_run_single_round_trip(n, k, d, ctx);
+                  bic_free_precomputed(ctx);
                 }
-                bic_print_config(n, k, d, ctx);
-                printf("\n");
-                bic_precompute(n, k, d, ctx);
-                bic_run_single_round_trip(n, k, d, ctx);
-                bic_free_precomputed(ctx);
               }
             }
           }

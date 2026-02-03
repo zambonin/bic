@@ -12,7 +12,7 @@ long double dmax(const long double a, const long double b) {
 
 #if defined(BITINT)
 long double lg(const uintx u) {
-  // actually a truncated logarithm
+
   if (u == 0) {
     return -1.0;
   }
@@ -124,10 +124,14 @@ uintx compute_bin(const uint32_t n, const uint32_t k, const bic_ctx_t ctx) {
   return res;
 }
 
-uintx compute_bic_no_cache(const uint16_t n, const uint16_t k,
-                           const uint16_t d) {
+uintx compute_bic_no_cache(const uint32_t n, const uint32_t k,
+                           const uint32_t d) {
   if (n == 0) {
     return 1;
+  }
+
+  if (d == 1) {
+    return compute_bin(k, n, NULL);
   }
 
   intx rop = 0;
@@ -135,8 +139,8 @@ uintx compute_bic_no_cache(const uint16_t n, const uint16_t k,
   uintx left = 0;
   uintx right = 0;
 
-  uint16_t j = min(k, n / (d + 1));
-  for (uint16_t i = 0; i <= j; ++i) {
+  uint32_t j = min(k, n / (d + 1));
+  for (uint32_t i = 0; i <= j; ++i) {
     left = compute_bin(k, i, NULL);
     right = compute_bin(n - (d + 1) * i + k - 1, k - 1, NULL);
     compute = left * right;
@@ -149,11 +153,18 @@ uintx compute_bic_no_cache(const uint16_t n, const uint16_t k,
   return (rop < 0) ? 0 : (uintx)rop;
 }
 
-uintx compute_bic_with_sums(const uint16_t n, const uint16_t k,
-                            const uint16_t d, intx *partial_sums,
+uintx compute_bic_with_sums(const uint32_t n, const uint32_t k,
+                            const uint32_t d, intx *partial_sums,
                             const bic_ctx_t ctx) {
   if (n == 0) {
     return 1;
+  }
+
+  if (d == 1) {
+    if (partial_sums != NULL) {
+      partial_sums[0] = (intx)ctx->bin(k, n, ctx);
+    }
+    return ctx->bin(k, n, ctx);
   }
 
   intx rop = 0;
@@ -161,8 +172,8 @@ uintx compute_bic_with_sums(const uint16_t n, const uint16_t k,
   uintx left = 0;
   uintx right = 0;
 
-  uint16_t j = min(k, n / (d + 1));
-  for (uint16_t i = 0; i <= j; ++i) {
+  uint32_t j = min(k, n / (d + 1));
+  for (uint32_t i = 0; i <= j; ++i) {
     left = ctx->bin(k, i, ctx);
     right = ctx->bin(n - (d + 1) * i + k - 1, k - 1, ctx);
     compute = left * right;
@@ -179,14 +190,14 @@ uintx compute_bic_with_sums(const uint16_t n, const uint16_t k,
   return (rop < 0) ? 0 : (uintx)rop;
 }
 
-uintx compute_bic(const uint16_t n, const uint16_t k, const uint16_t d,
+uintx compute_bic(const uint32_t n, const uint32_t k, const uint32_t d,
                   const bic_ctx_t ctx) {
   return compute_bic_with_sums(n, k, d, NULL, ctx);
 }
 
-uint16_t compute_acc(uintx *rop, const uint16_t n, const uint16_t k,
-                     const uint16_t d, const bic_ctx_t ctx) {
-  uint16_t i = 0;
+uint16_t compute_acc(uintx *rop, const uint32_t n, const uint32_t k,
+                     const uint32_t d, const bic_ctx_t ctx) {
+  uint32_t i = 0;
   uintx sum = 0;
 
   rop[0] = 0;
@@ -198,18 +209,18 @@ uint16_t compute_acc(uintx *rop, const uint16_t n, const uint16_t k,
   return i;
 }
 
-uintx compute_dir(const uint16_t n, const uint16_t k, const uint16_t d,
-                  const uint16_t l, const bic_ctx_t ctx) {
-  uint16_t j = min(k, n / (d + 1));
-  uint16_t u;
+uintx compute_dir(const uint32_t n, const uint32_t k, const uint32_t d,
+                  const uint32_t l, const bic_ctx_t ctx) {
+  uint32_t j = min(k, n / (d + 1));
+  uint32_t u;
 
   intx tmp = 0;
   intx rop = 0;
 
-  for (uint16_t i = 0; i <= j; ++i) {
+  for (uint32_t i = 0; i <= j; ++i) {
     u = n - (d + 1) * i + k;
-    tmp = ctx->bin(k, i, ctx) *
-          (ctx->bin(u, k, ctx) - ctx->bin(max(0, u - l), k, ctx));
+    uintx bin_u_l = (u >= l) ? ctx->bin(u - l, k, ctx) : 0;
+    tmp = ctx->bin(k, i, ctx) * (ctx->bin(u, k, ctx) - bin_u_l);
     if (i & 1U) {
       tmp = -tmp;
     }
@@ -238,8 +249,8 @@ uintx W(const int16_t s, const int16_t c, const int16_t y, const int16_t l,
   return sum;
 }
 
-uintx S_p(const uint16_t n, const uint16_t k, const uint16_t d,
-          const uint16_t l, const uint16_t p, const bic_ctx_t ctx) {
+uintx S_p(const uint32_t n, const uint32_t k, const uint32_t d,
+          const uint32_t l, const uint16_t p, const bic_ctx_t ctx) {
   if (k == 0) {
     return (n == 0 && l > 0) ? 1 : 0;
   }
@@ -282,8 +293,8 @@ void S0_to_S2(uintx *S0, uintx *S1, uintx *S2, const uint32_t n,
   }
 }
 
-double exp_total_sum(const uint16_t n, const uint16_t k, const uint16_t d,
-                     const uint16_t l, const bic_ctx_t ctx) {
+double exp_total_sum(const uint32_t n, const uint32_t k, const uint32_t d,
+                     const uint32_t l, const bic_ctx_t ctx) {
   if (l == 0) {
     return (double)n;
   }
@@ -300,8 +311,8 @@ double exp_total_sum(const uint16_t n, const uint16_t k, const uint16_t d,
   return (double)S1 / (double)S0;
 }
 
-double var_total_sum(const uint16_t n, const uint16_t k, const uint16_t d,
-                     const uint16_t l, const bic_ctx_t ctx) {
+double var_total_sum(const uint32_t n, const uint32_t k, const uint32_t d,
+                     const uint32_t l, const bic_ctx_t ctx) {
   if (l == 0) {
     return 0.0;
   }
@@ -319,8 +330,8 @@ double var_total_sum(const uint16_t n, const uint16_t k, const uint16_t d,
   return dmax(0.0, ((double)S2 / (double)S0) - (exp_val * exp_val));
 }
 
-double var_single_part(const uint16_t n, const uint16_t k, const uint16_t d,
-                       const uint16_t l, const bic_ctx_t ctx) {
+double var_single_part(const uint32_t n, const uint32_t k, const uint32_t d,
+                       const uint32_t l, const bic_ctx_t ctx) {
   if (k == 0) {
     return 0.0;
   }
@@ -353,16 +364,16 @@ double var_single_part(const uint16_t n, const uint16_t k, const uint16_t d,
   return dmax(0.0, lhs - rhs);
 }
 
-double exp_part_sum(const uint16_t n, const uint16_t k, const uint16_t d,
-                    const uint16_t j, const uint16_t l, const bic_ctx_t ctx) {
+double exp_part_sum(const uint32_t n, const uint32_t k, const uint32_t d,
+                    const uint32_t j, const uint32_t l, const bic_ctx_t ctx) {
   if (k <= 0) {
     return 0.0;
   }
   return (double)j * exp_total_sum(n, k, d, l, ctx) / k;
 }
 
-double var_part_sum(const uint16_t n, const uint16_t k, const uint16_t d,
-                    const uint16_t j, const uint16_t l, const bic_ctx_t ctx) {
+double var_part_sum(const uint32_t n, const uint32_t k, const uint32_t d,
+                    const uint32_t j, const uint32_t l, const bic_ctx_t ctx) {
   if (k <= 1) {
     return var_total_sum(n, k, d, l, ctx);
   }
@@ -375,8 +386,45 @@ double var_part_sum(const uint16_t n, const uint16_t k, const uint16_t d,
   return dmax(0.0, lhs + rhs);
 }
 
-double stddev_part_sum(const uint16_t n, const uint16_t k, const uint16_t d,
-                       const uint16_t j, const uint16_t l,
+double stddev_part_sum(const uint32_t n, const uint32_t k, const uint32_t d,
+                       const uint32_t j, const uint32_t l,
                        const bic_ctx_t ctx) {
   return asqrt(var_part_sum(n, k, d, j, l, ctx));
+}
+
+void calc_hset(uint16_t k, uint16_t L, uint16_t *H, size_t *h_size) {
+  if (k == 0 || k == 1)
+    return;
+
+  size_t current_size = 0;
+  uint16_t last = UINT16_MAX;
+
+  for (size_t p = 1; p <= L; ++p) {
+    uint16_t lo = k >> p;
+    uint16_t hi = (uint16_t)((k + ((uint16_t)1 << p) - 1) >> p);
+
+    if (hi != last) {
+      if (hi > 0)
+        H[current_size++] = hi;
+      last = hi;
+    }
+
+    if (lo != last) {
+      if (lo > 0)
+        H[current_size++] = lo;
+      last = lo;
+    }
+  }
+
+  for (size_t i = 0; i < current_size; ++i) {
+    for (size_t j = i + 1; j < current_size; ++j) {
+      if (H[i] > H[j]) {
+        uint16_t tmp = H[i];
+        H[i] = H[j];
+        H[j] = tmp;
+      }
+    }
+  }
+
+  *h_size = current_size;
 }

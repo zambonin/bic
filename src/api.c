@@ -2,6 +2,7 @@
 #include "bous.h"
 #include "cache.h"
 #include "colex.h"
+#include "generic.h"
 #include "gray.h"
 #include "rbo.h"
 #include "search.h"
@@ -13,16 +14,22 @@ typedef struct {
   const char *target;
 } name_search_ctx_t;
 
+const char *bic_rank_alg_names[BIC_RANK_ALG_LENGTH] = {
+    "default",
+    "generic",
+    "ad",
+};
+
 uintx compute_bin(const uint32_t n, const uint32_t k, const bic_ctx_t ctx);
 
-uintx compute_bic(const uint16_t n, const uint16_t k, const uint16_t d,
+uintx compute_bic(const uint32_t n, const uint32_t k, const uint32_t d,
                   const bic_ctx_t ctx);
 
-uint16_t compute_acc(uintx *rop, const uint16_t n, const uint16_t k,
-                     const uint16_t d, const bic_ctx_t ctx);
+uint16_t compute_acc(uintx *rop, const uint32_t n, const uint32_t k,
+                     const uint32_t d, const bic_ctx_t ctx);
 
-uintx compute_dir(const uint16_t n, const uint16_t k, const uint16_t d,
-                  const uint16_t l, const bic_ctx_t ctx);
+uintx compute_dir(const uint32_t n, const uint32_t k, const uint32_t d,
+                  const uint32_t l, const bic_ctx_t ctx);
 
 bic_ctx_t bic_ctx_init() {
   bic_ctx_t ctx = (bic_ctx_t)malloc(sizeof(struct bic_ctx_s));
@@ -32,6 +39,7 @@ bic_ctx_t bic_ctx_init() {
 
   ctx->order = BIC_ORDER_COLEX;
   ctx->unrank_alg = BIC_ALG_DEFAULT;
+  ctx->rank_alg = BIC_RANK_ALG_DEFAULT;
   ctx->cache_type = BIC_CACHE_NONE;
   ctx->strategy = BIC_STRATEGY_GEN;
   ctx->scomb_cache_stddev_level = 4;
@@ -58,7 +66,7 @@ bic_ctx_t bic_ctx_init() {
 
 void bic_ctx_destroy(bic_ctx_t ctx) { free(ctx); }
 
-bool match_name(const uint16_t i, const void *ctx) {
+bool match_name(const uint32_t i, const void *ctx) {
   const name_search_ctx_t *c = (const name_search_ctx_t *)ctx;
   const uint8_t *s1 = (const uint8_t *)c->names[i];
   const uint8_t *s2 = (const uint8_t *)c->target;
@@ -73,13 +81,14 @@ bool match_name(const uint16_t i, const void *ctx) {
 
 uint8_t bic_ctx_set_generic_by_name(const char *name, const find_ctx_t find_ctx,
                                     bic_ctx_t ctx) {
-  uint16_t idx;
+  uint32_t idx_val;
   name_search_ctx_t c = {.names = find_ctx.names, .target = name};
-  linear_search(&idx, 0, find_ctx.length, match_name, &c);
-  return find_ctx.setter(idx, ctx);
+  linear_search(&idx_val, 0, find_ctx.length, match_name, &c);
+  return find_ctx.setter((uint8_t)idx_val, ctx);
 }
 
 uint8_t bic_ctx_set_order(const uint8_t order, bic_ctx_t ctx) {
+
   switch (order) {
   case BIC_ORDER_COLEX:
     ctx->unrank = colex_unrank;
@@ -92,6 +101,10 @@ uint8_t bic_ctx_set_order(const uint8_t order, bic_ctx_t ctx) {
   case BIC_ORDER_RBO:
     ctx->unrank = rbo_unrank;
     ctx->rank = rbo_rank;
+    break;
+  case BIC_ORDER_RBO_MO:
+    ctx->unrank = rbo_mo_unrank;
+    ctx->rank = rbo_mo_rank;
     break;
   case BIC_ORDER_SPIRAL:
     ctx->unrank = spiral_unrank;
@@ -107,6 +120,9 @@ uint8_t bic_ctx_set_order(const uint8_t order, bic_ctx_t ctx) {
   }
 
   ctx->order = (bic_order_t)order;
+  ctx->unrank_alg = BIC_ALG_DEFAULT;
+  ctx->rank_alg = BIC_RANK_ALG_DEFAULT;
+
   return 0;
 }
 
@@ -114,13 +130,85 @@ uint8_t bic_ctx_set_order_by_name(const char *name, bic_ctx_t ctx) {
   return bic_ctx_set_generic_by_name(name, bic_order_find_ctx, ctx);
 }
 
+static uint8_t set_generic_unrank_alg(bic_ctx_t ctx) {
+  switch (ctx->order) {
+  case BIC_ORDER_COLEX:
+    ctx->unrank = colex_generic_unrank;
+    break;
+  case BIC_ORDER_RBO:
+    ctx->unrank = rbo_generic_unrank;
+    break;
+  case BIC_ORDER_RBO_MO:
+    ctx->unrank = rbo_mo_generic_unrank;
+    break;
+  case BIC_ORDER_SPIRAL:
+    ctx->unrank = spiral_generic_unrank;
+    break;
+  case BIC_ORDER_GRAY:
+    ctx->unrank = gray_generic_unrank;
+    break;
+  case BIC_ORDER_BOUS:
+    ctx->unrank = bous_generic_unrank;
+    break;
+  default:
+    return 1;
+  }
+  ctx->unrank_alg = BIC_ALG_GENERIC;
+  return 0;
+}
+
+static uint8_t set_generic_rank_alg(bic_ctx_t ctx) {
+  switch (ctx->order) {
+  case BIC_ORDER_COLEX:
+    ctx->rank = colex_generic_rank;
+    break;
+  case BIC_ORDER_RBO:
+    ctx->rank = rbo_generic_rank;
+    break;
+  case BIC_ORDER_RBO_MO:
+    ctx->rank = rbo_mo_generic_rank;
+    break;
+  case BIC_ORDER_SPIRAL:
+    ctx->rank = spiral_generic_rank;
+    break;
+  case BIC_ORDER_GRAY:
+    ctx->rank = gray_generic_rank;
+    break;
+  case BIC_ORDER_BOUS:
+    ctx->rank = bous_generic_rank;
+    break;
+  default:
+    return 1;
+  }
+  ctx->rank_alg = BIC_RANK_ALG_GENERIC;
+  return 0;
+}
+
 uint8_t bic_ctx_set_unrank_alg(const uint8_t alg, bic_ctx_t ctx) {
+  if (alg == BIC_ALG_GENERIC) {
+    return set_generic_unrank_alg(ctx);
+  }
+
   if (ctx->order != BIC_ORDER_COLEX && alg != BIC_ALG_DEFAULT) {
     return 1;
   }
 
   switch (alg) {
   case BIC_ALG_DEFAULT:
+    if (ctx->order == BIC_ORDER_COLEX)
+      ctx->unrank = colex_unrank;
+    else if (ctx->order == BIC_ORDER_GRAY)
+      ctx->unrank = gray_unrank;
+    else if (ctx->order == BIC_ORDER_RBO)
+      ctx->unrank = rbo_unrank;
+    else if (ctx->order == BIC_ORDER_RBO_MO)
+      ctx->unrank = rbo_mo_unrank;
+    else if (ctx->order == BIC_ORDER_SPIRAL)
+      ctx->unrank = spiral_unrank;
+    else if (ctx->order == BIC_ORDER_BOUS)
+      ctx->unrank = bous_unrank;
+    else
+      return 1;
     break;
   case BIC_ALG_PS:
     ctx->unrank = colex_unrank_part_sums;
@@ -140,6 +228,51 @@ uint8_t bic_ctx_set_unrank_alg(const uint8_t alg, bic_ctx_t ctx) {
 
   ctx->unrank_alg = (bic_unrank_alg_t)alg;
   return 0;
+}
+
+uint8_t bic_ctx_set_rank_alg(const uint8_t alg, bic_ctx_t ctx) {
+  if (alg == BIC_RANK_ALG_GENERIC) {
+    return set_generic_rank_alg(ctx);
+  }
+
+  if (alg == BIC_RANK_ALG_DEFAULT) {
+    if (ctx->order == BIC_ORDER_COLEX)
+      ctx->rank = colex_rank;
+    else if (ctx->order == BIC_ORDER_GRAY)
+      ctx->rank = gray_rank;
+    else if (ctx->order == BIC_ORDER_RBO)
+      ctx->rank = rbo_rank;
+    else if (ctx->order == BIC_ORDER_RBO_MO)
+      ctx->rank = rbo_mo_rank;
+    else if (ctx->order == BIC_ORDER_SPIRAL)
+      ctx->rank = spiral_rank;
+    else if (ctx->order == BIC_ORDER_BOUS)
+      ctx->rank = bous_rank;
+    else
+      return 1;
+  } else if (alg == BIC_RANK_ALG_AD) {
+    if (ctx->order == BIC_ORDER_COLEX) {
+      ctx->rank = colex_rank_acc_direct;
+    } else {
+      return 1;
+    }
+  } else {
+
+    return 1;
+  }
+
+  ctx->rank_alg = (bic_rank_alg_t)alg;
+  return 0;
+}
+
+static const find_ctx_t bic_rank_alg_find_ctx = {
+    .names = bic_rank_alg_names,
+    .setter = bic_ctx_set_rank_alg,
+    .length = BIC_RANK_ALG_LENGTH,
+};
+
+uint8_t bic_ctx_set_rank_alg_by_name(const char *name, bic_ctx_t ctx) {
+  return bic_ctx_set_generic_by_name(name, bic_rank_alg_find_ctx, ctx);
 }
 
 uint8_t bic_ctx_set_unrank_alg_by_name(const char *name, bic_ctx_t ctx) {
@@ -185,24 +318,25 @@ uint8_t bic_ctx_set_strategy_by_name(const char *name, bic_ctx_t ctx) {
 uint8_t bic_ctx_set_defaults(bic_ctx_t ctx) {
   ctx->order = BIC_ORDER_COLEX;
   ctx->unrank_alg = BIC_ALG_DEFAULT;
+  ctx->rank_alg = BIC_RANK_ALG_DEFAULT;
   ctx->cache_type = BIC_CACHE_COMB;
   return 0;
 }
 
-void bic_run_strategy(const uint16_t m, uint16_t *n, const uint16_t k,
-                      uint16_t *d, const bic_ctx_t ctx) {
+void bic_run_strategy(const uint32_t m, uint32_t *n, const uint32_t k,
+                      uint32_t *d, const bic_ctx_t ctx) {
   ctx->search(m, n, k, d);
 }
 
-void bic_unrank(uint32_t *rop, const uint16_t n, const uint16_t k,
-                const uint16_t d, const uintx r, const bic_ctx_t ctx) {
+void bic_unrank(uint32_t *rop, const uint32_t n, const uint32_t k,
+                const uint32_t d, const uintx r, const bic_ctx_t ctx) {
   if (k == 0) {
     return;
   }
   ctx->unrank(rop, n, k, d, r, ctx);
 }
 
-uintx bic_rank(const uint16_t n, const uint16_t k, const uint16_t d,
+uintx bic_rank(const uint32_t n, const uint32_t k, const uint32_t d,
                const uint32_t *comp, const bic_ctx_t ctx) {
   if (k == 0) {
     return 0;
@@ -210,7 +344,7 @@ uintx bic_rank(const uint16_t n, const uint16_t k, const uint16_t d,
   return ctx->rank(n, k, d, comp, ctx);
 }
 
-uint8_t bic_precompute(const uint16_t n, const uint16_t k, const uint16_t d,
+uint8_t bic_precompute(const uint32_t n, const uint32_t k, const uint32_t d,
                        bic_ctx_t ctx) {
   if (k == 0) {
     return 0;
