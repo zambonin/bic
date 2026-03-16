@@ -38,4 +38,6 @@ double exp_part_sum(const uint32_t n, const uint32_t k, const uint32_t d,
 double stddev_part_sum(const uint32_t n, const uint32_t k, const uint32_t d,
                        const uint32_t j, const uint32_t l, const bic_ctx_t ctx);
 
+void calc_hset(uint32_t k, uint16_t L, uint32_t *H, size_t *h_size);
+
 #endif

@@ -3,7 +3,7 @@
 uintx *acc_cache_get_ptr(const uint32_t n, const uint32_t k, uint32_t *len,
                          const bic_ctx_t ctx) {
   const cache_t *c = ctx->acc_cache;
-  uint32_t col_idx = k;
+  uint32_t col_idx = get_mapped_col(c, k);
 
   if (col_idx == UINT32_MAX) {
     return NULL;
@@ -73,29 +73,54 @@ uint8_t acc_build_cache(const uint32_t n, const uint32_t k, const uint32_t d,
     return 1;
   }
 
+  uint32_t effective_cols = k;
+  uint32_t *H = NULL;
+  size_t h_size = 0;
+
+  if (init_sparse_structures(k, ctx, &H, &h_size, c)) {
+    acc_free_cache(ctx);
+    return 1;
+  }
+
+  if (H) {
+    size_t valid_count = 0;
+    for (size_t i = 0; i < h_size; ++i) {
+      if (H[i] < k) {
+        c->col_map[H[i]] = (int16_t)valid_count;
+        H[valid_count++] = H[i];
+      }
+    }
+    h_size = valid_count;
+    effective_cols = (uint32_t)h_size;
+  }
+
   c->rows = n + 1;
-  c->cols = k;
+  c->cols = effective_cols;
   c->depth = d;
   c->d = d;
 
   if (!cache_product_fits(c->rows, c->cols, sizeof(bic_meta_t))) {
+    free(H);
     acc_free_cache(ctx);
     return 1;
   }
   c->meta = (bic_meta_t *)calloc((size_t)c->rows * c->cols, sizeof(bic_meta_t));
   if (c->meta == NULL) {
+    free(H);
     acc_free_cache(ctx);
     return 1;
   }
   c->length = acc_cache_length(c->rows, c->cols, c->d, (bic_meta_t *)c->meta);
   if (c->length == SIZE_MAX ||
       !cache_allocation_fits(c->length, sizeof(uintx))) {
+    free(H);
     acc_free_cache(ctx);
     return 1;
   }
 
   c->data = uintx_alloc(c->length);
   if (c->data == NULL) {
+    free(H);
     acc_free_cache(ctx);
     return 1;
   }
@@ -103,7 +128,7 @@ uint8_t acc_build_cache(const uint32_t n, const uint32_t k, const uint32_t d,
   uint32_t len = 0;
   for (uint32_t row = 0; row < c->rows; ++row) {
     for (uint32_t col = 0; col < c->cols; ++col) {
-      uint32_t real_k = col;
+      uint32_t real_k = (H) ? H[col] : col;
 
       uintx *const slice = acc_cache_get_ptr(row, real_k, &len, ctx);
       slice[0] = 0;
@@ -114,6 +139,8 @@ uint8_t acc_build_cache(const uint32_t n, const uint32_t k, const uint32_t d,
       }
     }
   }
+
+  free(H);
 
   ctx->acc = acc_cache_get;
   ctx->dir = dir_cache_get;
@@ -126,6 +153,7 @@ void acc_free_cache(bic_ctx_t ctx) {
     return;
   }
 
+  free(ctx->acc_cache->col_map);
   free(ctx->acc_cache->meta);
   uintx_free(ctx->acc_cache->data);
   free(ctx->acc_cache);

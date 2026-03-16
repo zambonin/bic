@@ -6,6 +6,44 @@ static const bic_cache_t dependencies[BIC_CACHE_LENGTH] = {
     BIC_CACHE_BIN,  BIC_CACHE_COMB, BIC_CACHE_COMB,
 };
 
+uint8_t init_sparse_structures(const uint32_t k, const bic_ctx_t ctx,
+                               uint32_t **H_out, size_t *h_size_out,
+                               cache_t *c) {
+  if (ctx->order != BIC_ORDER_RBO && ctx->order != BIC_ORDER_BOUS) {
+    return 0;
+  }
+
+  uint16_t L = (uint16_t)lg(k);
+  if (L == 0 && k > 1) {
+    L = 1;
+  }
+
+  uint32_t *H = (uint32_t *)malloc(2 * (size_t)L * sizeof(uint32_t) + 16);
+  if (!H) {
+    return 1;
+  }
+
+  calc_hset(k, L, H, h_size_out);
+
+  if (!cache_allocation_fits((size_t)k + 1, sizeof(int16_t))) {
+    free(H);
+    return 1;
+  }
+  c->col_map = (int16_t *)malloc(((size_t)k + 1) * sizeof(int16_t));
+  if (!c->col_map) {
+    free(H);
+    return 1;
+  }
+  c->col_map_size = k + 1;
+
+  for (uint32_t i = 0; i <= k; ++i) {
+    c->col_map[i] = -1;
+  }
+
+  *H_out = H;
+  return 0;
+}
+
 static bool already_built(const bic_cache_t type, const bic_ctx_t ctx) {
   switch (type) {
   case BIC_CACHE_BIN:

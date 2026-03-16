@@ -393,3 +393,44 @@ double stddev_part_sum(const uint32_t n, const uint32_t k, const uint32_t d,
                        const bic_ctx_t ctx) {
   return asqrt(var_part_sum(n, k, d, j, l, ctx));
 }
+
+void calc_hset(uint32_t k, uint16_t L, uint32_t *H, size_t *h_size) {
+  *h_size = 0;
+  if (k == 0 || k == 1) {
+    return;
+  }
+
+  size_t current_size = 0;
+  uint32_t last = UINT32_MAX;
+
+  for (size_t p = 1; p <= L; ++p) {
+    uint32_t lo = k >> p;
+    uint32_t hi = (uint32_t)((k + ((uint32_t)1 << p) - 1) >> p);
+
+    if (hi != last) {
+      if (hi > 0) {
+        H[current_size++] = hi;
+      }
+      last = hi;
+    }
+
+    if (lo != last) {
+      if (lo > 0) {
+        H[current_size++] = lo;
+      }
+      last = lo;
+    }
+  }
+
+  for (size_t i = 0; i < current_size; ++i) {
+    for (size_t j = i + 1; j < current_size; ++j) {
+      if (H[i] > H[j]) {
+        uint32_t tmp = H[i];
+        H[i] = H[j];
+        H[j] = tmp;
+      }
+    }
+  }
+
+  *h_size = current_size;
+}

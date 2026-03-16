@@ -3,7 +3,12 @@
 uintx *scomb_cache_get_ptr(const uint32_t n, const uint32_t k,
                            const bic_ctx_t ctx) {
   const cache_t *c = ctx->scomb_cache;
-  uint32_t meta_idx = k - 1;
+  uint32_t col_idx = get_mapped_col(c, k);
+  if (col_idx == UINT32_MAX) {
+    return NULL;
+  }
+
+  uint32_t meta_idx = (c->col_map) ? col_idx : (k - 1);
 
   if (meta_idx >= c->cols) {
     return NULL;
@@ -77,39 +82,92 @@ uint8_t scomb_build_cache(const uint32_t n, const uint32_t k, const uint32_t d,
     return 1;
   }
 
+  uint32_t effective_cols = k - 1;
+  uint32_t *H = NULL;
+  size_t h_size = 0;
+
+  if (init_sparse_structures(k, ctx, &H, &h_size, c)) {
+    scomb_free_cache(ctx);
+    return 1;
+  }
+
+  if (H) {
+    size_t valid_count = 0;
+    for (size_t i = 0; i < h_size; ++i) {
+      if (H[i] >= 1 && H[i] < k) {
+        c->col_map[H[i]] = (int16_t)valid_count;
+        H[valid_count++] = H[i];
+      }
+    }
+    h_size = valid_count;
+    effective_cols = (uint32_t)h_size;
+  }
+
   c->rows = n + 1;
-  c->cols = k - 1;
+  c->cols = effective_cols;
   c->depth = 1;
 
   if (!cache_allocation_fits(c->cols, sizeof(bic_meta_t))) {
+    free(H);
     scomb_free_cache(ctx);
     return 1;
   }
   c->meta = (bic_meta_t *)calloc(c->cols, sizeof(bic_meta_t));
   if (c->meta == NULL && c->cols != 0) {
+    free(H);
     scomb_free_cache(ctx);
     return 1;
   }
 
-  c->length = scomb_cache_length(c->rows, c->cols, d,
-                                 ctx->scomb_cache_stddev_level, c->meta, ctx);
+  if (H) {
+    size_t total = 0;
+    if (!cache_product_fits(c->rows, c->cols, sizeof(uintx))) {
+      free(H);
+      scomb_free_cache(ctx);
+      return 1;
+    }
+    for (uint32_t col = 0; col < c->cols; ++col) {
+      c->meta[col].base = 0;
+      c->meta[col].length = c->rows;
+      c->meta[col].offset = total;
+      total += c->rows;
+    }
+    c->length = total;
+  } else {
+    c->length = scomb_cache_length(c->rows, c->cols, d,
+                                   ctx->scomb_cache_stddev_level, c->meta, ctx);
+  }
 
   if (c->length == SIZE_MAX ||
       !cache_allocation_fits(c->length, sizeof(uintx))) {
+    free(H);
     scomb_free_cache(ctx);
     return 1;
   }
   c->data = uintx_alloc(c->length == 0 ? 1 : c->length);
   if (c->data == NULL) {
+    free(H);
     scomb_free_cache(ctx);
     return 1;
   }
 
-  for (uint32_t col = 0; col < c->cols; ++col) {
-    const bic_meta_t m = c->meta[col];
-    for (uint32_t row = m.base; row < m.base + m.length; ++row) {
-      *scomb_cache_get_ptr(row, col + 1, ctx) =
-          compute_bic(row, col + 1, d, ctx);
+  if (H) {
+    for (uint32_t col = 0; col < c->cols; ++col) {
+      const bic_meta_t m = c->meta[col];
+      uint32_t real_k = H[col];
+      for (uint32_t row = m.base; row < m.base + m.length; ++row) {
+        *scomb_cache_get_ptr(row, real_k, ctx) =
+            compute_bic(row, real_k, d, ctx);
+      }
+    }
+    free(H);
+  } else {
+    for (uint32_t col = 0; col < c->cols; ++col) {
+      const bic_meta_t m = c->meta[col];
+      for (uint32_t row = m.base; row < m.base + m.length; ++row) {
+        *scomb_cache_get_ptr(row, col + 1, ctx) =
+            compute_bic(row, col + 1, d, ctx);
+      }
     }
   }
 
@@ -123,6 +181,7 @@ void scomb_free_cache(bic_ctx_t ctx) {
     return;
   }
 
+  free(ctx->scomb_cache->col_map);
   free(ctx->scomb_cache->meta);
   uintx_free(ctx->scomb_cache->data);
   free(ctx->scomb_cache);

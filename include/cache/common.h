@@ -20,8 +20,18 @@ static inline bool cache_product_fits(const size_t a, const size_t b,
                     cache_allocation_fits(a * b, element_size));
 }
 
-void *cache_get_element(const cache_t *cache, const uint32_t row,
-                        const uint32_t col);
+static inline uint32_t get_mapped_col(const cache_t *c, uint32_t k) {
+  if (c->col_map) {
+    if (k >= c->col_map_size || c->col_map[k] == -1) {
+      return UINT32_MAX;
+    }
+    return (uint32_t)c->col_map[k];
+  }
+  return k;
+}
+uint8_t init_sparse_structures(const uint32_t k, const bic_ctx_t ctx,
+                               uint32_t **H_out, size_t *h_size_out,
+                               cache_t *c);
 
 uint8_t build_cache_rec(const bic_cache_t type, const uint32_t n,
                         const uint32_t k, const uint32_t d, bic_ctx_t ctx);

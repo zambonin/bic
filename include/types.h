@@ -48,6 +48,8 @@ typedef struct cache_s {
   uintx *data;
   uint32_t rows;
   uint32_t cols;
+  int16_t *col_map;
+  uint32_t col_map_size;
   uint32_t d;
   uint32_t depth;
   bic_cache_t prereq;

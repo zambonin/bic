@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "cache/common.h"
 #include "extra.h"
 
 typedef struct {
@@ -30,13 +31,17 @@ uintx bin_access(const uint32_t n, const uint32_t k, const bic_ctx_t ctx) {
 
 uintx comp_access(const uint32_t n, const uint32_t k, const uint32_t d,
                   const bic_ctx_t ctx) {
+  uintx *ptr = NULL;
+  cache_t *cache = NULL;
   if (ctx->cache_type == BIC_CACHE_COMB) {
-    count(n * ctx->comb_cache->cols + k);
+    cache = ctx->comb_cache;
+    ptr = comb_cache_get_ptr(n, k, ctx);
   } else if (ctx->cache_type == BIC_CACHE_SMALL_COMB) {
-    const bic_meta_t m = ((const bic_meta_t *)ctx->scomb_cache->meta)[k - 1];
-    if (n >= m.base && n <= (m.base + m.length - 1)) {
-      count(m.offset + (n - m.base));
-    }
+    cache = ctx->scomb_cache;
+    ptr = scomb_cache_get_ptr(n, k, ctx);
+  }
+  if (ptr != NULL) {
+    count((size_t)(ptr - cache->data));
   }
   return g_acc_ctx.comp(n, k, d, ctx);
 }
@@ -44,10 +49,12 @@ uintx comp_access(const uint32_t n, const uint32_t k, const uint32_t d,
 uint32_t acc_access(uintx *rop, const uint32_t n, const uint32_t k,
                     const uint32_t d, const bic_ctx_t ctx) {
   if (ctx->cache_type == BIC_CACHE_ACC) {
-    const bic_meta_t *meta = (const bic_meta_t *)ctx->acc_cache->meta;
-    const bic_meta_t m = meta[n * ctx->acc_cache->cols + k];
-    for (uint32_t i = 0; i < m.length; i++) {
-      count(m.offset + i);
+    uint32_t len = 0;
+    uintx *ptr = acc_cache_get_ptr(n, k, &len, ctx);
+    if (ptr != NULL) {
+      for (uint32_t i = 0; i < len; ++i) {
+        count((size_t)(ptr - ctx->acc_cache->data) + i);
+      }
     }
   }
   return g_acc_ctx.acc(rop, n, k, d, ctx);
@@ -56,9 +63,11 @@ uint32_t acc_access(uintx *rop, const uint32_t n, const uint32_t k,
 uintx dir_access(const uint32_t n, const uint32_t k, const uint32_t d,
                  const uint32_t l, const bic_ctx_t ctx) {
   if (ctx->cache_type == BIC_CACHE_ACC) {
-    const bic_meta_t *meta = (const bic_meta_t *)ctx->acc_cache->meta;
-    const bic_meta_t m = meta[n * ctx->acc_cache->cols + k];
-    count(m.offset + l);
+    uint32_t len = 0;
+    uintx *ptr = acc_cache_get_ptr(n, k, &len, ctx);
+    if (ptr != NULL && l < len) {
+      count((size_t)(ptr - ctx->acc_cache->data) + l);
+    }
   }
   return g_acc_ctx.dir(n, k, d, l, ctx);
 }
