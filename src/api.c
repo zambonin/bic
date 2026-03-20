@@ -3,6 +3,7 @@
 #include "order/bous.h"
 #include "order/colex.h"
 #include "order/gray.h"
+#include "order/rb_spiral.h"
 #include "order/rbo.h"
 #include "order/spiral.h"
 #include "search.h"
@@ -98,6 +99,10 @@ uint8_t bic_ctx_set_order(const uint8_t order, bic_ctx_t ctx) {
   case BIC_ORDER_BOUS:
     ctx->unrank = bous_unrank;
     ctx->rank = bous_rank;
+    break;
+  case BIC_ORDER_RB_SPIRAL:
+    ctx->unrank = rb_spiral_unrank;
+    ctx->rank = rb_spiral_rank;
     break;
   default:
     return 1;

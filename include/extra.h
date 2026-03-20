@@ -107,6 +107,7 @@ static const char *bic_order_sub_options[BIC_ORDER_LENGTH] = {
     "recursive block order due to Miracle-Yilek",
     "spiral order centered on mean",
     "boustrophedonic order",
+    "recursive block order centered on mean",
 };
 
 static const cli_option_def_t opt_order = {

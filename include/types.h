@@ -9,6 +9,7 @@ typedef enum {
   BIC_ORDER_RBO,
   BIC_ORDER_SPIRAL,
   BIC_ORDER_BOUS,
+  BIC_ORDER_RB_SPIRAL,
   BIC_ORDER_LENGTH,
 } bic_order_t;
 
