@@ -120,7 +120,7 @@ static const cli_option_def_t opt_order = {
     .num_sub_options = BIC_ORDER_LENGTH,
 };
 
-static const char *bic_unrank_alg_sub_options[BIC_ALG_LENGTH] = {
+static const char *bic_unrank_alg_sub_options[BIC_UNRANK_ALG_LENGTH] = {
     "linear search over #C(n, k, d) calculated on demand",
     "linear search reusing partial sums of a single #C(n, k, d)",
     "linear search over a pre-calculated array of accumulated sums of #C(n, k, "
@@ -138,7 +138,7 @@ static const cli_option_def_t opt_algorithm = {
     .parser = parse_string,
     .sub_option_names = bic_unrank_alg_names,
     .sub_option_infos = bic_unrank_alg_sub_options,
-    .num_sub_options = BIC_ALG_LENGTH,
+    .num_sub_options = BIC_UNRANK_ALG_LENGTH,
 };
 
 static const cli_option_def_t opt_iterations = {

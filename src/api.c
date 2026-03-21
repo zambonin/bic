@@ -14,6 +14,10 @@ typedef struct {
   const char *target;
 } name_search_ctx_t;
 
+const char *bic_rank_alg_names[BIC_RANK_ALG_LENGTH] = {
+    "default",
+};
+
 uintx compute_bin(const uint32_t n, const uint32_t k, const bic_ctx_t ctx);
 
 uintx compute_bic(const uint32_t n, const uint32_t k, const uint32_t d,
@@ -33,6 +37,7 @@ bic_ctx_t bic_ctx_init() {
 
   ctx->order = BIC_ORDER_COLEX;
   ctx->unrank_alg = BIC_ALG_DEFAULT;
+  ctx->rank_alg = BIC_RANK_ALG_DEFAULT;
   ctx->cache_type = BIC_CACHE_NONE;
   ctx->strategy = BIC_STRATEGY_GEN;
   ctx->scomb_cache_stddev_level = 4;
@@ -110,6 +115,7 @@ uint8_t bic_ctx_set_order(const uint8_t order, bic_ctx_t ctx) {
 
   ctx->order = (bic_order_t)order;
   ctx->unrank_alg = BIC_ALG_DEFAULT;
+  ctx->rank_alg = BIC_RANK_ALG_DEFAULT;
   return 0;
 }
 
@@ -124,6 +130,28 @@ uint8_t bic_ctx_set_unrank_alg(const uint8_t alg, bic_ctx_t ctx) {
 
   switch (alg) {
   case BIC_ALG_DEFAULT:
+    switch (ctx->order) {
+    case BIC_ORDER_COLEX:
+      ctx->unrank = colex_unrank;
+      break;
+    case BIC_ORDER_GRAY:
+      ctx->unrank = gray_unrank;
+      break;
+    case BIC_ORDER_RBO:
+      ctx->unrank = rbo_unrank;
+      break;
+    case BIC_ORDER_SPIRAL:
+      ctx->unrank = spiral_unrank;
+      break;
+    case BIC_ORDER_BOUS:
+      ctx->unrank = bous_unrank;
+      break;
+    case BIC_ORDER_RB_SPIRAL:
+      ctx->unrank = rb_spiral_unrank;
+      break;
+    default:
+      return 1;
+    }
     break;
   case BIC_ALG_PS:
     ctx->unrank = colex_unrank_part_sums;
@@ -147,6 +175,44 @@ uint8_t bic_ctx_set_unrank_alg(const uint8_t alg, bic_ctx_t ctx) {
 
 uint8_t bic_ctx_set_unrank_alg_by_name(const char *name, bic_ctx_t ctx) {
   return bic_ctx_set_generic_by_name(name, bic_unrank_alg_find_ctx, ctx);
+}
+
+uint8_t bic_ctx_set_rank_alg(const uint8_t alg, bic_ctx_t ctx) {
+  if (ctx->order >= BIC_ORDER_LENGTH) {
+    return 1;
+  }
+  if (alg == BIC_RANK_ALG_DEFAULT) {
+    switch (ctx->order) {
+    case BIC_ORDER_COLEX:
+      ctx->rank = colex_rank;
+      break;
+    case BIC_ORDER_GRAY:
+      ctx->rank = gray_rank;
+      break;
+    case BIC_ORDER_RBO:
+      ctx->rank = rbo_rank;
+      break;
+    case BIC_ORDER_SPIRAL:
+      ctx->rank = spiral_rank;
+      break;
+    case BIC_ORDER_BOUS:
+      ctx->rank = bous_rank;
+      break;
+    case BIC_ORDER_RB_SPIRAL:
+      ctx->rank = rb_spiral_rank;
+      break;
+    default:
+      return 1;
+    }
+  } else {
+    return 1;
+  }
+  ctx->rank_alg = (bic_rank_alg_t)alg;
+  return 0;
+}
+
+uint8_t bic_ctx_set_rank_alg_by_name(const char *name, bic_ctx_t ctx) {
+  return bic_ctx_set_generic_by_name(name, bic_rank_alg_find_ctx, ctx);
 }
 
 uint8_t bic_ctx_set_cache(const uint8_t cache, bic_ctx_t ctx) {

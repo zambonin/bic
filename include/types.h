@@ -19,7 +19,7 @@ typedef enum {
   BIC_ALG_AL,
   BIC_ALG_AB,
   BIC_ALG_AD,
-  BIC_ALG_LENGTH,
+  BIC_UNRANK_ALG_LENGTH,
 } bic_unrank_alg_t;
 
 typedef enum {
@@ -38,6 +38,11 @@ typedef enum {
   BIC_STRATEGY_RANDOM,
   BIC_STRATEGY_LENGTH,
 } bic_strategy_t;
+
+typedef enum {
+  BIC_RANK_ALG_DEFAULT = 0,
+  BIC_RANK_ALG_LENGTH,
+} bic_rank_alg_t;
 
 typedef struct {
   size_t offset;
@@ -86,6 +91,7 @@ typedef uintx (*bic_math_dir_func_t)(const uint32_t n, const uint32_t k,
 struct bic_ctx_s {
   bic_order_t order;
   bic_unrank_alg_t unrank_alg;
+  bic_rank_alg_t rank_alg;
   bic_cache_t cache_type;
   bic_strategy_t strategy;
 

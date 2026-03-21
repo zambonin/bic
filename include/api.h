@@ -32,13 +32,25 @@ uint8_t bic_ctx_set_unrank_alg(const uint8_t alg, bic_ctx_t ctx);
 
 uint8_t bic_ctx_set_unrank_alg_by_name(const char *name, bic_ctx_t ctx);
 
-static const char *bic_unrank_alg_names[BIC_ALG_LENGTH] = {
+static const char *bic_unrank_alg_names[BIC_UNRANK_ALG_LENGTH] = {
     "default", "ps", "al", "ab", "ad",
 };
 static const find_ctx_t bic_unrank_alg_find_ctx = {
     .names = bic_unrank_alg_names,
     .setter = bic_ctx_set_unrank_alg,
-    .length = BIC_ALG_LENGTH,
+    .length = BIC_UNRANK_ALG_LENGTH,
+};
+
+extern const char *bic_rank_alg_names[BIC_RANK_ALG_LENGTH];
+
+uint8_t bic_ctx_set_rank_alg(const uint8_t alg, bic_ctx_t ctx);
+
+uint8_t bic_ctx_set_rank_alg_by_name(const char *name, bic_ctx_t ctx);
+
+static const find_ctx_t bic_rank_alg_find_ctx = {
+    .names = bic_rank_alg_names,
+    .setter = bic_ctx_set_rank_alg,
+    .length = BIC_RANK_ALG_LENGTH,
 };
 
 uint8_t bic_ctx_set_cache(const uint8_t cache, bic_ctx_t ctx);
