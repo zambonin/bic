@@ -134,3 +134,16 @@ uintx colex_rank(const uint32_t n, const uint32_t k, const uint32_t d,
 
   return rank;
 }
+
+uintx colex_rank_acc_direct(const uint32_t n, const uint32_t k,
+                            const uint32_t d, const uint32_t *comb,
+                            const bic_ctx_t ctx) {
+  uintx rank = 0;
+  uint32_t it_n = n;
+
+  for (uint32_t i = k - 1; i > 0; it_n -= comb[i], --i) {
+    rank += ctx->dir(it_n, i, d, comb[i], ctx);
+  }
+
+  return rank;
+}

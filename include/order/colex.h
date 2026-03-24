@@ -26,4 +26,8 @@ void colex_unrank_acc_direct(uint32_t *rop, const uint32_t n, const uint32_t k,
 uintx colex_rank(const uint32_t n, const uint32_t k, const uint32_t d,
                  const uint32_t *comb, const bic_ctx_t ctx);
 
+uintx colex_rank_acc_direct(const uint32_t n, const uint32_t k,
+                            const uint32_t d, const uint32_t *comb,
+                            const bic_ctx_t ctx);
+
 #endif

@@ -16,6 +16,7 @@ typedef struct {
 
 const char *bic_rank_alg_names[BIC_RANK_ALG_LENGTH] = {
     "default",
+    "ad",
 };
 
 uintx compute_bin(const uint32_t n, const uint32_t k, const bic_ctx_t ctx);
@@ -204,6 +205,8 @@ uint8_t bic_ctx_set_rank_alg(const uint8_t alg, bic_ctx_t ctx) {
     default:
       return 1;
     }
+  } else if (alg == BIC_RANK_ALG_AD && ctx->order == BIC_ORDER_COLEX) {
+    ctx->rank = colex_rank_acc_direct;
   } else {
     return 1;
   }
