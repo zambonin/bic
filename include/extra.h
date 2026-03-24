@@ -131,14 +131,29 @@ static const char *bic_unrank_alg_sub_options[BIC_UNRANK_ALG_LENGTH] = {
     "demand",
 };
 
-static const cli_option_def_t opt_algorithm = {
-    .opt = {"algorithm", required_argument, 0, 'a'},
+static const cli_option_def_t opt_unrank_alg = {
+    .opt = {"unrank_alg", required_argument, 0, 'a'},
     .description = "Specific unranking strategy for `colex` order.",
     .type_description = "alg",
     .parser = parse_string,
     .sub_option_names = bic_unrank_alg_names,
     .sub_option_infos = bic_unrank_alg_sub_options,
     .num_sub_options = BIC_UNRANK_ALG_LENGTH,
+};
+
+static const char *bic_rank_alg_sub_options[BIC_RANK_ALG_LENGTH] = {
+    "inverse of the default unranking algorithm",
+    "direct calculation of rank using binomial coefficients",
+};
+
+static const cli_option_def_t opt_rank_alg = {
+    .opt = {"rank_alg", required_argument, 0, 'R'},
+    .description = "Specific ranking strategy.",
+    .type_description = "alg",
+    .parser = parse_string,
+    .sub_option_names = bic_rank_alg_names,
+    .sub_option_infos = bic_rank_alg_sub_options,
+    .num_sub_options = BIC_RANK_ALG_LENGTH,
 };
 
 static const cli_option_def_t opt_iterations = {

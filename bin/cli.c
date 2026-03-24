@@ -9,7 +9,8 @@ int32_t main(int32_t argc, char **argv) {
   uint32_t d = 0;
   uint32_t m = 0;
   char *order = (char *)"colex";
-  char *algorithm = (char *)"default";
+  char *unrank_alg = (char *)"default";
+  char *rank_alg = (char *)"default";
   char *cache = (char *)"none";
   char *strategy = (char *)"gen";
   uint32_t iterations = 8;
@@ -27,7 +28,8 @@ int32_t main(int32_t argc, char **argv) {
       {&opt_bound, &d},
       {&opt_target, &m},
       {&opt_order, &order},
-      {&opt_algorithm, &algorithm},
+      {&opt_unrank_alg, &unrank_alg},
+      {&opt_rank_alg, &rank_alg},
       {&opt_cache, &cache},
       {&opt_strategy, &strategy},
       {&opt_iterations, &iterations},
@@ -46,7 +48,8 @@ int32_t main(int32_t argc, char **argv) {
 
   if (k == 0 || ctx == NULL || (uint64_t)n > (uint64_t)k * d ||
       bic_ctx_set_order_by_name(order, ctx) ||
-      bic_ctx_set_unrank_alg_by_name(algorithm, ctx) ||
+      bic_ctx_set_unrank_alg_by_name(unrank_alg, ctx) ||
+      bic_ctx_set_rank_alg_by_name(rank_alg, ctx) ||
       bic_ctx_set_cache_by_name(cache, ctx) ||
       bic_ctx_set_strategy_by_name(strategy, ctx)) {
     print_help(argv[0], options);

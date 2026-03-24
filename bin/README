@@ -16,6 +16,7 @@
 │  * `bin/cli.c`: a simple CLI to test the available algorithms. It will     │
 │    unrank a random integer to a composition and rank it back, showing      │
 │    performance stats and other information.                                │
+│    The rank and unrank algorithms can be selected independently.           │
 │                                                                            │
 │  * `bin/enum.c`: a program to enumerate all possible compositions for a    │
 │    given `n`, `k`, and `d`.                                                │

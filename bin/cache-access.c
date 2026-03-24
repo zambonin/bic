@@ -211,7 +211,7 @@ int32_t main(int32_t argc, char **argv) {
       {&opt_bound, &d},
       {&opt_target, &m},
       {&opt_order, &order},
-      {&opt_algorithm, &algorithm},
+      {&opt_unrank_alg, &algorithm},
       {&opt_cache, &cache},
       {&opt_strategy, &strategy},
       {&opt_iterations, &iterations},
