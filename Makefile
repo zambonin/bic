@@ -1,6 +1,6 @@
 CC = g++
 CFLAGS = -Wall -Wextra -pedantic -O3 -march=native -mtune=native -Iinclude -D_XOPEN_SOURCE=500
-SRC = $(filter-out src/extra.c, $(wildcard src/*.c src/order/*.c src/cache/*.c))
+SRC = $(filter-out src/extra.c, $(wildcard src/*.c src/order/*.c src/cache/*.c src/generic/*.c))
 TARGETS = $(basename $(wildcard bin/*.c))
 OBJ = $(SRC:.c=.o)
 LIB = libbic.a
@@ -42,7 +42,7 @@ $(LIBEXTRA): $(OBJ) src/extra.o
 $(TARGETS): %: %.o $(LIBEXTRA)
 
 clean:
-	$(RM) $(OUT) $(wildcard src/*.o src/order/*.o src/cache/*.o) $(wildcard bin/*.o) \
+	$(RM) $(OUT) $(wildcard src/*.o src/order/*.o src/cache/*.o src/generic/*.o) $(wildcard bin/*.o) \
 		$(LIB) $(LIBEXTRA) $(TARGETS) $(PRIMES)
 
 include Makefile.figures

@@ -129,6 +129,7 @@ static const char *bic_unrank_alg_sub_options[BIC_UNRANK_ALG_LENGTH] = {
     "d)",
     "binary search over accumulated sums of #C(n, k, d) calculated directly on "
     "demand",
+    "iterator-based unranking for the selected order",
 };
 
 static const cli_option_def_t opt_unrank_alg = {
@@ -143,6 +144,7 @@ static const cli_option_def_t opt_unrank_alg = {
 
 static const char *bic_rank_alg_sub_options[BIC_RANK_ALG_LENGTH] = {
     "inverse of the default unranking algorithm",
+    "inverse of the generic unranking algorithm",
     "direct calculation of rank using binomial coefficients",
 };
 

@@ -1,5 +1,6 @@
 #include "api.h"
 #include "cache/common.h"
+#include "generic/colex.h"
 #include "order/bous.h"
 #include "order/colex.h"
 #include "order/gray.h"
@@ -16,6 +17,7 @@ typedef struct {
 
 const char *bic_rank_alg_names[BIC_RANK_ALG_LENGTH] = {
     "default",
+    "generic",
     "ad",
 };
 
@@ -125,7 +127,9 @@ uint8_t bic_ctx_set_order_by_name(const char *name, bic_ctx_t ctx) {
 }
 
 uint8_t bic_ctx_set_unrank_alg(const uint8_t alg, bic_ctx_t ctx) {
-  if (ctx->order != BIC_ORDER_COLEX && alg != BIC_ALG_DEFAULT) {
+  if (ctx->order >= BIC_ORDER_LENGTH ||
+      (ctx->order != BIC_ORDER_COLEX && alg != BIC_ALG_DEFAULT &&
+       alg != BIC_ALG_GENERIC)) {
     return 1;
   }
 
@@ -166,6 +170,15 @@ uint8_t bic_ctx_set_unrank_alg(const uint8_t alg, bic_ctx_t ctx) {
   case BIC_ALG_AD:
     ctx->unrank = colex_unrank_acc_direct;
     break;
+  case BIC_ALG_GENERIC:
+    switch (ctx->order) {
+    case BIC_ORDER_COLEX:
+      ctx->unrank = colex_generic_unrank;
+      break;
+    default:
+      return 1;
+    }
+    break;
   default:
     return 1;
   }
@@ -201,6 +214,14 @@ uint8_t bic_ctx_set_rank_alg(const uint8_t alg, bic_ctx_t ctx) {
       break;
     case BIC_ORDER_RB_SPIRAL:
       ctx->rank = rb_spiral_rank;
+      break;
+    default:
+      return 1;
+    }
+  } else if (alg == BIC_RANK_ALG_GENERIC) {
+    switch (ctx->order) {
+    case BIC_ORDER_COLEX:
+      ctx->rank = colex_generic_rank;
       break;
     default:
       return 1;

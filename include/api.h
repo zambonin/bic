@@ -33,7 +33,7 @@ uint8_t bic_ctx_set_unrank_alg(const uint8_t alg, bic_ctx_t ctx);
 uint8_t bic_ctx_set_unrank_alg_by_name(const char *name, bic_ctx_t ctx);
 
 static const char *bic_unrank_alg_names[BIC_UNRANK_ALG_LENGTH] = {
-    "default", "ps", "al", "ab", "ad",
+    "default", "ps", "al", "ab", "ad", "generic",
 };
 static const find_ctx_t bic_unrank_alg_find_ctx = {
     .names = bic_unrank_alg_names,

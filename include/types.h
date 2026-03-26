@@ -19,6 +19,7 @@ typedef enum {
   BIC_ALG_AL,
   BIC_ALG_AB,
   BIC_ALG_AD,
+  BIC_ALG_GENERIC,
   BIC_UNRANK_ALG_LENGTH,
 } bic_unrank_alg_t;
 
@@ -41,7 +42,8 @@ typedef enum {
 
 typedef enum {
   BIC_RANK_ALG_DEFAULT = 0,
-  BIC_RANK_ALG_AD = 1,
+  BIC_RANK_ALG_GENERIC = 1,
+  BIC_RANK_ALG_AD = 2,
   BIC_RANK_ALG_LENGTH,
 } bic_rank_alg_t;
 
