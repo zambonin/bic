@@ -1,5 +1,6 @@
 #include "api.h"
 #include "cache/common.h"
+#include "generic/bous.h"
 #include "generic/colex.h"
 #include "generic/gray.h"
 #include "generic/rbo.h"
@@ -178,6 +179,9 @@ uint8_t bic_ctx_set_unrank_alg(const uint8_t alg, bic_ctx_t ctx) {
     case BIC_ORDER_COLEX:
       ctx->unrank = colex_generic_unrank;
       break;
+    case BIC_ORDER_BOUS:
+      ctx->unrank = bous_generic_unrank;
+      break;
     case BIC_ORDER_RBO:
       ctx->unrank = rbo_generic_unrank;
       break;
@@ -234,6 +238,9 @@ uint8_t bic_ctx_set_rank_alg(const uint8_t alg, bic_ctx_t ctx) {
     switch (ctx->order) {
     case BIC_ORDER_COLEX:
       ctx->rank = colex_generic_rank;
+      break;
+    case BIC_ORDER_BOUS:
+      ctx->rank = bous_generic_rank;
       break;
     case BIC_ORDER_RBO:
       ctx->rank = rbo_generic_rank;
