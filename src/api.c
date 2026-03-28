@@ -3,6 +3,7 @@
 #include "generic/bous.h"
 #include "generic/colex.h"
 #include "generic/gray.h"
+#include "generic/rb_spiral.h"
 #include "generic/rbo.h"
 #include "generic/spiral.h"
 #include "order/bous.h"
@@ -179,6 +180,9 @@ uint8_t bic_ctx_set_unrank_alg(const uint8_t alg, bic_ctx_t ctx) {
     case BIC_ORDER_COLEX:
       ctx->unrank = colex_generic_unrank;
       break;
+    case BIC_ORDER_RB_SPIRAL:
+      ctx->unrank = rb_spiral_generic_unrank;
+      break;
     case BIC_ORDER_BOUS:
       ctx->unrank = bous_generic_unrank;
       break;
@@ -238,6 +242,9 @@ uint8_t bic_ctx_set_rank_alg(const uint8_t alg, bic_ctx_t ctx) {
     switch (ctx->order) {
     case BIC_ORDER_COLEX:
       ctx->rank = colex_generic_rank;
+      break;
+    case BIC_ORDER_RB_SPIRAL:
+      ctx->rank = rb_spiral_generic_rank;
       break;
     case BIC_ORDER_BOUS:
       ctx->rank = bous_generic_rank;
