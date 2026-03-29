@@ -6,3 +6,4 @@ libbic.a
 libbicext.a
 bin/cache-access
 bin/enum
+bin/perf
