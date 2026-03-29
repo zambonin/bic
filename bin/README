@@ -13,6 +13,11 @@
 │    algorithms and counts how many times each cache entry is accessed.      │
 │    Then, it prints a heatmap of the cache accesses.                        │
 │                                                                            │
+│  * `bin/cache-size.c`: a program to measure the memory savings of the      │
+│    different cache types compared to their full counterparts. It prints    │
+│    the percentage of memory save for various parameter configurations and  │
+│    standard deviation levels.                                              │
+│                                                                            │
 │  * `bin/cli.c`: a simple CLI to test the available algorithms. It will     │
 │    unrank a random integer to a composition and rank it back, showing      │
 │    performance stats and other information.                                │

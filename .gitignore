@@ -7,3 +7,4 @@ libbicext.a
 bin/cache-access
 bin/enum
 bin/perf
+bin/cache-size
