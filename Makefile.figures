@@ -14,9 +14,10 @@ CLEAN_EXTS_TEX := *.aux *.log *.fls *.fdb_latexmk *.synctex.gz *.synctex \
 
 EXP_DIRS :=
 
+include exp/cache-access-pattern/Makefile
 include exp/visual-order/Makefile
 
-figures: visual-order
+figures: cache-access-pattern visual-order
 
 clean-data:
 	$(foreach dir,$(EXP_DIRS),$(RM) $(addprefix $(dir)/,$(CLEAN_EXTS_DAT)))
