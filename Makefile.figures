@@ -16,9 +16,10 @@ EXP_DIRS :=
 
 include exp/cache-access-pattern/Makefile
 include exp/cache-size/Makefile
+include exp/perf-ranking/Makefile
 include exp/visual-order/Makefile
 
-figures: cache-access-pattern cache-size visual-order
+figures: cache-access-pattern cache-size perf-unranking visual-order
 
 clean-data:
 	$(foreach dir,$(EXP_DIRS),$(RM) $(addprefix $(dir)/,$(CLEAN_EXTS_DAT)))
