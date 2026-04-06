@@ -18,6 +18,10 @@
 │    the percentage of memory save for various parameter configurations and  │
 │    standard deviation levels.                                              │
 │                                                                            │
+│  * `bin/cache-sparse-size.c`: a program to compare dense vs sparse cache   │
+│    sizes for RBO/boustrophedonic orders. Demonstrates the halving set      │
+│    column optimization savings for `comb`, `acc`, and `scomb` caches.      │
+│                                                                            │
 │  * `bin/cli.c`: a simple CLI to test the available algorithms. It will     │
 │    unrank a random integer to a composition and rank it back, showing      │
 │    performance stats and other information.                                │
