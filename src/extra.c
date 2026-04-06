@@ -28,7 +28,15 @@ uint16_t bits_fit_bic(const uint32_t n, const uint32_t k, const uint32_t d) {
 }
 
 uintx random_rank(const uint32_t n, const uint32_t k, const uint32_t d) {
-  uint16_t len = bits_fit_bic(n, k, d) / sizeof(uint64_t);
+  return random_rank_count(compute_bic_no_cache(n, k, d));
+}
+
+uintx random_rank_count(const uintx count) {
+  if (count == 0) {
+    abort();
+  }
+
+  uint16_t len = (1 + (uint16_t)lg(count)) / sizeof(uint64_t);
   len += (len == 0);
 
   uint8_t *message = (uint8_t *)calloc(len, sizeof(uint8_t));
@@ -39,7 +47,7 @@ uintx random_rank(const uint32_t n, const uint32_t k, const uint32_t d) {
   uintx rank = import_from_unsigned_char(message, len);
 
   free(message);
-  return rank % compute_bic_no_cache(n, k, d);
+  return rank % count;
 }
 
 uintx import_from_unsigned_char(const uint8_t *bytes, const size_t len) {

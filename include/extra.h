@@ -32,6 +32,8 @@ uint16_t bits_fit_bic(const uint32_t n, const uint32_t k, const uint32_t d);
 
 uintx random_rank(const uint32_t n, const uint32_t k, const uint32_t d);
 
+uintx random_rank_count(const uintx count);
+
 uintx import_from_unsigned_char(const uint8_t *bytes, const size_t len);
 
 void bic_run_round_trips(const uint32_t n, const uint32_t k, const uint32_t d,

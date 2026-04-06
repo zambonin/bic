@@ -36,4 +36,9 @@
 │    The output is a table that can be used to compare the performance of    │
 │    the different configurations.                                           │
 │                                                                            │
+│  * `bin/ratio-n-kd.c`: a program to benchmark unranking performance as a   │
+│    function of n/kd ratio (0.05 to 2.0). Compares all orders at fixed      │
+│    k=32, d=255 to show how order performance varies with composition       │
+│    density.                                                                │
+│                                                                            │
 └────────────────────────────────────────────────────────────────────────────┘

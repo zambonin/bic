@@ -9,3 +9,4 @@ bin/enum
 bin/perf
 bin/cache-size
 bin/cache-sparse-size
+bin/ratio-n-kd
