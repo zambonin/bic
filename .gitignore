@@ -10,3 +10,4 @@ bin/perf
 bin/cache-size
 bin/cache-sparse-size
 bin/ratio-n-kd
+bin/cache-hits

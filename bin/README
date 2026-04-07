@@ -14,6 +14,11 @@
 │    Then, it prints a heatmap of the cache accesses.                        │
 │    It also reports hit rates, cache size, and the deviation level used.    │
 │                                                                            │
+│  * `bin/cache-hits.c`: a program to measure the cache hit rate for a       │
+│    given parameter set and cache type. Wraps the internal math functions   │
+│    to count how many lookups are served from the precomputed table vs      │
+│    computed on demand, then prints the percentage.                         │
+│                                                                            │
 │  * `bin/cache-size.c`: a program to measure the memory savings of the      │
 │    different cache types compared to their full counterparts. It prints    │
 │    the percentage of memory save for various parameter configurations and  │
