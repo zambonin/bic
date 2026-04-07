@@ -12,6 +12,7 @@
 │    of the different cache types. It runs the ranking and unranking         │
 │    algorithms and counts how many times each cache entry is accessed.      │
 │    Then, it prints a heatmap of the cache accesses.                        │
+│    It also reports hit rates, cache size, and the deviation level used.    │
 │                                                                            │
 │  * `bin/cache-size.c`: a program to measure the memory savings of the      │
 │    different cache types compared to their full counterparts. It prints    │
@@ -24,8 +25,8 @@
 │                                                                            │
 │  * `bin/cli.c`: a simple CLI to test the available algorithms. It will     │
 │    unrank a random integer to a composition and rank it back, showing      │
-│    performance stats and other information.                                │
-│    The rank and unrank algorithms can be selected independently.           │
+│    performance stats and other information. The rank and unrank            │
+│    algorithms can be selected independently.                               │
 │                                                                            │
 │  * `bin/enum.c`: a program to enumerate all possible compositions for a    │
 │    given `n`, `k`, and `d`.                                                │

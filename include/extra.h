@@ -36,6 +36,9 @@ uintx random_rank_count(const uintx count);
 
 uintx import_from_unsigned_char(const uint8_t *bytes, const size_t len);
 
+void check_valid_bounded_composition(const uint32_t *c, const uint32_t n,
+                                     const uint32_t k, const uint32_t d);
+
 void bic_run_round_trips(const uint32_t n, const uint32_t k, const uint32_t d,
                          const uint32_t iterations, long double *utime,
                          long double *ucycles, long double *rtime,
