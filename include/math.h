@@ -1,7 +1,9 @@
 #ifndef MATH_H
 #define MATH_H
 
-#include "common.h"
+#include <stdbool.h>
+
+#include "types.h"
 
 uint32_t min(const uint32_t a, const uint32_t b);
 
@@ -11,8 +13,16 @@ long double lg(const uintx u);
 
 double asqrt(double x);
 
-// §6.1 of 10.1007/978-3-642-14764-7_6
 uintx compute_bin(const uint32_t n, const uint32_t k, const bic_ctx_t ctx);
+
+bool bic_params_supported(const uint32_t n, const uint32_t k, const uint32_t d,
+                          const bic_cache_t cache);
+
+bool bic_dense_comb_params_supported(const uint32_t n, const uint32_t k,
+                                     const uint32_t d);
+
+bool bic_cache_moments_supported(const uint32_t n, const uint32_t k,
+                                 const uint32_t d);
 
 uintx compute_bic_no_cache(const uint32_t n, const uint32_t k,
                            const uint32_t d);

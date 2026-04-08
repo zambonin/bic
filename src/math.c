@@ -1,6 +1,6 @@
 #include "math.h"
-#include "cache/common.h"
 #include "primes.h"
+#include <errno.h>
 
 uint32_t min(const uint32_t a, const uint32_t b) { return (a < b) ? a : b; }
 
@@ -94,6 +94,124 @@ static uint32_t gcd32(uint32_t a, uint32_t b) {
   return a;
 }
 
+#if defined(BITINT) || defined(BOOST_FIX_INT)
+static uintx max_exact_value(void) {
+  uintx limit = 1;
+  limit <<= (uint32_t)BIT_LENGTH - 1;
+  return limit - 1;
+}
+
+static bool binomial_bounded(const uint32_t n, const uint32_t k,
+                             const uintx limit, uintx *out) {
+  const uint32_t choose = min(k, n - k);
+  uintx result = 1;
+  for (uint32_t i = 1; i <= choose; ++i) {
+    uint32_t numerator = n - choose + i;
+    uint32_t denominator = i;
+    const uint32_t common = gcd32(numerator, denominator);
+    numerator /= common;
+    denominator /= common;
+    result /= denominator;
+    if (result > limit / numerator) {
+      return false;
+    }
+    result *= numerator;
+  }
+  if (out != NULL) {
+    *out = result;
+  }
+  return true;
+}
+#endif
+
+bool bic_params_supported(const uint32_t n, const uint32_t k, const uint32_t d,
+                          const bic_cache_t cache) {
+  if (cache >= BIC_CACHE_LENGTH || n > INT32_MAX || k > INT32_MAX ||
+      d > INT32_MAX || (uint64_t)n + k + 1 > UINT32_MAX) {
+    return false;
+  }
+  if (k == 0) {
+    return n == 0;
+  }
+
+#if defined(BITINT) || defined(BOOST_FIX_INT)
+  const uintx limit = max_exact_value();
+  const uint32_t nk = n + k;
+  const uint32_t terms = min(k, n / (d + 1));
+  uintx choose_factor, bin_factor;
+  if (!binomial_bounded(k, min(terms, k / 2), limit, &choose_factor) ||
+      !binomial_bounded(nk, k, limit, &bin_factor) ||
+      bin_factor > limit / choose_factor ||
+      bin_factor * choose_factor > limit / (terms + 1)) {
+    return false;
+  }
+
+  if (cache != BIC_CACHE_NONE &&
+      !binomial_bounded(nk, min(k, nk / 2), limit, &bin_factor)) {
+    return false;
+  }
+  if (cache >= BIC_CACHE_ACC) {
+    if (!binomial_bounded(nk + 1, k + 1, limit, &bin_factor) ||
+        bin_factor > limit / choose_factor ||
+        bin_factor * choose_factor > limit / (terms + 1)) {
+      return false;
+    }
+  }
+#endif
+  return true;
+}
+
+bool bic_dense_comb_params_supported(const uint32_t n, const uint32_t k,
+                                     const uint32_t d) {
+  if (n > INT32_MAX || k > INT32_MAX || d > INT32_MAX ||
+      (uint64_t)n + k + 1 > UINT32_MAX) {
+    return false;
+  }
+  if (k == 0) {
+    return n == 0;
+  }
+
+#if defined(BITINT) || defined(BOOST_FIX_INT)
+  const uintx limit = max_exact_value();
+  const uint32_t base = d + 1;
+  uintx bound = 1;
+  for (uint32_t i = 1; i < k; ++i) {
+    if (bound > limit / base) {
+      return false;
+    }
+    bound *= base;
+  }
+#endif
+  return true;
+}
+
+bool bic_cache_moments_supported(const uint32_t n, const uint32_t k,
+                                 const uint32_t d) {
+  if (!bic_dense_comb_params_supported(n, k, d)) {
+    return false;
+  }
+
+#if defined(BITINT) || defined(BOOST_FIX_INT)
+  const uintx limit = max_exact_value();
+  const uint32_t sum = n == 0 ? 1 : n;
+  const uint32_t base = d + 1;
+  uintx bound = 1;
+  for (uint32_t i = 0; i < 2; ++i) {
+    if (bound > limit / sum) {
+      return false;
+    }
+    bound *= sum;
+  }
+  for (uint32_t i = 0; i < k; ++i) {
+    if (bound > limit / base) {
+      return false;
+    }
+    bound *= base;
+  }
+#endif
+  return true;
+}
+
 static uintx compute_bin_without_primes(const uint32_t n, const uint32_t k) {
   const uint32_t choose = min(k, n - k);
   uintx result = 1;
@@ -122,6 +240,13 @@ uintx compute_bin(const uint32_t n, const uint32_t k, const bic_ctx_t ctx) {
   if (k == 0 || k == n) {
     return 1;
   }
+
+#if defined(BITINT) || defined(BOOST_FIX_INT)
+  if (n >= BIT_LENGTH && !binomial_bounded(n, k, max_exact_value(), NULL)) {
+    errno = ERANGE;
+    return 0;
+  }
+#endif
 
   if (n > PRIMES[N_PRIMES - 1]) {
     return compute_bin_without_primes(n, k);
@@ -159,6 +284,10 @@ uintx compute_bin(const uint32_t n, const uint32_t k, const bic_ctx_t ctx) {
 
 uintx compute_bic_no_cache(const uint32_t n, const uint32_t k,
                            const uint32_t d) {
+  if (!bic_params_supported(n, k, d, BIC_CACHE_NONE)) {
+    errno = ERANGE;
+    return 0;
+  }
   if (n == 0) {
     return 1;
   }

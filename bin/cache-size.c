@@ -48,8 +48,16 @@ int32_t main(int32_t argc, char **argv) {
     uint32_t k = 0;
     uint32_t d = 0;
 
-    gen_small_params_random(&n, &k, &d);
-    bic_precompute(n, k, d, ctx);
+    bool supported = false;
+    for (uint32_t tries = 0; tries < 1024 && !supported; ++tries) {
+      gen_small_params_random(&n, &k, &d);
+      supported = bic_cache_moments_supported(n, k, d);
+    }
+    if (!supported || bic_precompute(n, k, d, ctx) != 0) {
+      fputs("no supported cache-size parameters available\n", stderr);
+      bic_ctx_destroy(ctx);
+      return 1;
+    }
 
     uint32_t bin_cols = k + 1;
     uint32_t bin_rows = n + bin_cols;

@@ -16,37 +16,6 @@ void gen_small_params_random(uint32_t *n, uint32_t *k, uint32_t *d) {
   *n = (*k * *d + 1) / 2;
 }
 
-size_t get_cache_size(bic_ctx_t ctx, bic_cache_t type, uint32_t n, uint32_t k,
-                      uint32_t d) {
-  if (build_cache_rec(type, n, k, d, ctx)) {
-    free_all_caches(ctx);
-    return SIZE_MAX;
-  }
-
-  size_t size = 0;
-  switch (type) {
-  case BIC_CACHE_COMB:
-    if (ctx->comb_cache) {
-      size = ctx->comb_cache->length;
-    }
-    break;
-  case BIC_CACHE_ACC:
-    if (ctx->acc_cache) {
-      size = ctx->acc_cache->length;
-    }
-    break;
-  case BIC_CACHE_SMALL_COMB:
-    if (ctx->scomb_cache) {
-      size = ctx->scomb_cache->length;
-    }
-    break;
-  default:
-    break;
-  }
-  free_all_caches(ctx);
-  return size;
-}
-
 int32_t main(int32_t argc, char **argv) {
   int error = 0;
   uint32_t iterations = 10;
@@ -68,6 +37,7 @@ int32_t main(int32_t argc, char **argv) {
   if (ctx == NULL) {
     return 1;
   }
+  bic_ctx_set_cache(BIC_CACHE_COMB, ctx);
 
   printf("n\tk\td\tcomb_dense\tcomb_sparse\tcomb_save%%\tacc_dense\tacc_"
          "sparse\tacc_save%%\tscomb_dense\tscomb_sparse\tscomb_save%%\n");
@@ -77,28 +47,35 @@ int32_t main(int32_t argc, char **argv) {
     uint32_t k = 0;
     uint32_t d = 0;
 
-    gen_small_params_random(&n, &k, &d);
+    bool supported = false;
+    for (uint32_t tries = 0; tries < 1024 && !supported; ++tries) {
+      gen_small_params_random(&n, &k, &d);
+      supported = bic_cache_moments_supported(n, k, d);
+    }
+    if (!supported || bic_precompute(n, k, d, ctx) != 0) {
+      fputs("no supported cache-size parameters available\n", stderr);
+      error = 1;
+      break;
+    }
 
-    bic_ctx_set_order(BIC_ORDER_COLEX, ctx);
-    size_t comb_dense = get_cache_size(ctx, BIC_CACHE_COMB, n, k, d);
-    bic_ctx_set_order(BIC_ORDER_RBO, ctx);
-    size_t comb_sparse = get_cache_size(ctx, BIC_CACHE_COMB, n, k, d);
+    uint32_t H[64];
+    size_t sparse_cols = 0;
+    calc_hset(k, (uint16_t)lg(k), H, &sparse_cols);
 
-    bic_ctx_set_order(BIC_ORDER_COLEX, ctx);
-    size_t acc_dense = get_cache_size(ctx, BIC_CACHE_ACC, n, k, d);
-    bic_ctx_set_order(BIC_ORDER_RBO, ctx);
-    size_t acc_sparse = get_cache_size(ctx, BIC_CACHE_ACC, n, k, d);
-
-    bic_ctx_set_order(BIC_ORDER_COLEX, ctx);
-    size_t scomb_dense = get_cache_size(ctx, BIC_CACHE_SMALL_COMB, n, k, d);
-    bic_ctx_set_order(BIC_ORDER_RBO, ctx);
-    size_t scomb_sparse = get_cache_size(ctx, BIC_CACHE_SMALL_COMB, n, k, d);
+    const size_t comb_dense = comb_cache_length(n + 1, k + 1);
+    const size_t comb_sparse = comb_cache_length(n + 1, sparse_cols);
+    const size_t acc_dense = acc_cache_length(n + 1, k, d, NULL);
+    const size_t acc_sparse = acc_cache_length(n + 1, sparse_cols, d, NULL);
+    const size_t scomb_dense = scomb_cache_length(
+        n + 1, k - 1, d, ctx->scomb_cache_stddev_level, NULL, ctx);
+    const size_t scomb_sparse = comb_cache_length(n + 1, sparse_cols);
 
     if (comb_dense == SIZE_MAX || comb_sparse == SIZE_MAX ||
         acc_dense == SIZE_MAX || acc_sparse == SIZE_MAX ||
         scomb_dense == SIZE_MAX || scomb_sparse == SIZE_MAX) {
       fputs("cache allocation failed\n", stderr);
       error = 1;
+      bic_free_precomputed(ctx);
       break;
     }
 
@@ -113,6 +90,7 @@ int32_t main(int32_t argc, char **argv) {
     printf("%d\t%d\t%d\t%zu\t%zu\t%.2f\t%zu\t%zu\t%.2f\t%zu\t%zu\t%.2f\n", n, k,
            d, comb_dense, comb_sparse, comb_save, acc_dense, acc_sparse,
            acc_save, scomb_dense, scomb_sparse, scomb_save);
+    bic_free_precomputed(ctx);
   }
 
   bic_ctx_destroy(ctx);
