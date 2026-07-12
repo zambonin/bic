@@ -1,4 +1,5 @@
 #include "order/rbo.h"
+#include "generic.h"
 #include "math.h"
 
 #include "types.h"
@@ -16,16 +17,18 @@ void inner_rbo_unrank(uint32_t *rop, const uint32_t n, const uint32_t k,
   uint32_t left = (uint32_t)(k / 2);
   uint32_t right = k - left;
 
-  uint32_t leftSum = 0;
+  uint32_t leftSum, limit;
+  compute_bounds(n, left, right, d, &leftSum, &limit);
   uint32_t rightSum = 0;
   uintx rightPoints = 0;
 
-  const uint64_t capacity = (uint64_t)left * d;
-  const uint32_t limit = capacity < n ? (uint32_t)capacity : n;
   for (uintx count = 0; leftSum <= limit; ++leftSum, rank -= count) {
     rightSum = n - leftSum;
     rightPoints = ctx->comp(rightSum, right, d, ctx);
-    count = ctx->comp(leftSum, left, d, ctx) * rightPoints;
+    const uintx leftPoints = (left == right && leftSum == rightSum)
+                                 ? rightPoints
+                                 : ctx->comp(leftSum, left, d, ctx);
+    count = leftPoints * rightPoints;
     if (rank < count) {
       break;
     }
@@ -65,7 +68,9 @@ uintx rbo_rank(const uint32_t n, const uint32_t k, const uint32_t d,
   }
 
   uintx case3 = 0;
-  for (uint32_t s = 0; s < leftSum; ++s) {
+  uint32_t first, limit;
+  compute_bounds(n, left, right, d, &first, &limit);
+  for (uint32_t s = first; s < leftSum; ++s) {
     case3 += ctx->comp(s, left, d, ctx) * ctx->comp(n - s, right, d, ctx);
   }
 

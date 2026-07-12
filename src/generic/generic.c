@@ -39,7 +39,8 @@ void bic_generic_unrank(uint32_t *res, uint32_t n, uint32_t k, uint32_t d,
     uint32_t w_r = n - w_l;
 
     uintx vol_l = ctx->comp(w_l, k_l, d, ctx);
-    uintx vol_r = ctx->comp(w_r, k_r, d, ctx);
+    uintx vol_r =
+        (k_l == k_r && w_l == w_r) ? vol_l : ctx->comp(w_r, k_r, d, ctx);
     uintx vol = vol_l * vol_r;
 
     if (vol == 0) {
