@@ -49,11 +49,11 @@ size_t scomb_cache_length(const uint32_t rows, const uint32_t cols,
     const double mean_curr = exp_part_sum(n, k, d, kp, 0, ctx);
     const double std_curr = stddev_part_sum(n, k, d, kp, 0, ctx);
 
-    int32_t left = (int32_t)(mean_curr - level * std_curr);
-    int32_t right = (int32_t)(mean_target + level * std_target);
-
-    left = max(left, 0);
-    right = max(min(right, (int32_t)n), left);
+    const uint32_t left =
+        cache_band_endpoint(mean_curr - level * std_curr, n, false);
+    const uint32_t band_right =
+        cache_band_endpoint(mean_target + level * std_target, n, true);
+    const uint32_t right = band_right > left ? band_right : left;
 
     const uint32_t length = (right >= left) ? (right - left + 1) : 0;
 

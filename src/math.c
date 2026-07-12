@@ -1,6 +1,7 @@
 #include "math.h"
 #include "primes.h"
 #include <errno.h>
+#include <float.h>
 
 uint32_t min(const uint32_t a, const uint32_t b) { return (a < b) ? a : b; }
 
@@ -29,22 +30,22 @@ long double lg(const uintx u) {
 }
 #endif
 
-double asqrt(double x) {
-  if (x < 0) {
+double asqrt(const double x) {
+  if (x < 0.0) {
     return -1.0;
   }
-  if (x == 0) {
-    return 0;
+  if (x == 0.0 || x != x || x > DBL_MAX) {
+    return x;
   }
-  const double e = 0.000001;
 
-  double z = x / 2.0;
-  double y = 0.0;
-  while (y == 0 || (y - z) > e) {
+  double y = x < 1.0 ? 1.0 : x;
+  for (;;) {
+    const double z = 0.5 * y + 0.5 * (x / y);
+    if (z >= y) {
+      return 0.5L * y + 0.5L * ((long double)x / y);
+    }
     y = z;
-    z = (z + x / z) / 2.0;
   }
-  return z;
 }
 
 uintx ipow(const uint64_t b, const uint64_t e) {

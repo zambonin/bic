@@ -27,9 +27,12 @@ size_t small_acc_cache_length(const uint32_t rows, const uint32_t cols,
       const double mean = exp_part_sum(n, k, d, row, col, ctx);
       const double stddev = stddev_part_sum(n, k, d, row, col, ctx);
       const uint32_t lower_bound_n = (col > 0) ? (col - 1) : 0;
+      const uint32_t band_left =
+          cache_band_endpoint(mean - level * stddev, n, false);
       const uint32_t left =
-          max(max((int32_t)(mean - level * stddev), 0), lower_bound_n);
-      const uint32_t right = min((int32_t)(mean + level * stddev), n);
+          band_left > lower_bound_n ? band_left : lower_bound_n;
+      const uint32_t right =
+          cache_band_endpoint(mean + level * stddev, n, true);
       const uint32_t len = (right >= left) ? (right - left + 1) : 0;
 
       if (meta != NULL) {

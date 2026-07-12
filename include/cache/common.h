@@ -20,6 +20,21 @@ static inline bool cache_product_fits(const size_t a, const size_t b,
                     cache_allocation_fits(a * b, element_size));
 }
 
+static inline uint32_t cache_band_endpoint(const double value,
+                                           const uint32_t maximum,
+                                           const bool upper) {
+  if (value != value) {
+    return upper ? maximum : 0;
+  }
+  if (value <= 0.0) {
+    return 0;
+  }
+  if (value >= (double)maximum) {
+    return maximum;
+  }
+  return (uint32_t)value;
+}
+
 static inline uint32_t get_mapped_col(const cache_t *c, uint32_t k) {
   if (c->col_map) {
     if (k >= c->col_map_size || c->col_map[k] == -1) {
