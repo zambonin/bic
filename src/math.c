@@ -283,14 +283,25 @@ uintx compute_bin(const uint32_t n, const uint32_t k, const bic_ctx_t ctx) {
   return res;
 }
 
+static uint32_t reflected_total(const uint32_t n, const uint32_t k,
+                                const uint32_t d) {
+  const uint64_t complement = (uint64_t)k * d - n;
+  return complement < n ? (uint32_t)complement : n;
+}
+
 uintx compute_bic_no_cache(const uint32_t n, const uint32_t k,
                            const uint32_t d) {
-  if (!bic_params_supported(n, k, d, BIC_CACHE_NONE)) {
+  if (n > INT32_MAX || k > INT32_MAX || d > INT32_MAX) {
     errno = ERANGE;
     return 0;
   }
-  if (n == 0) {
-    return 1;
+  if (k == 0 || n == 0 || (uint64_t)n > (uint64_t)k * d) {
+    return n == 0 ? 1 : 0;
+  }
+  const uint32_t total = reflected_total(n, k, d);
+  if (!bic_params_supported(total, k, d, BIC_CACHE_NONE)) {
+    errno = ERANGE;
+    return 0;
   }
 
   intx rop = 0;
@@ -298,10 +309,10 @@ uintx compute_bic_no_cache(const uint32_t n, const uint32_t k,
   uintx left = 0;
   uintx right = 0;
 
-  uint32_t j = min(k, n / (d + 1));
+  uint32_t j = min(k, total / (d + 1));
   for (uint32_t i = 0; i <= j; ++i) {
     left = compute_bin(k, i, NULL);
-    right = compute_bin(n - (d + 1) * i + k - 1, k - 1, NULL);
+    right = compute_bin(total - (d + 1) * i + k - 1, k - 1, NULL);
     compute = (intx)(left * right);
     if (i & 1U) {
       compute = -compute;
@@ -344,7 +355,10 @@ uintx compute_bic_with_sums(const uint32_t n, const uint32_t k,
 
 uintx compute_bic(const uint32_t n, const uint32_t k, const uint32_t d,
                   const bic_ctx_t ctx) {
-  return compute_bic_with_sums(n, k, d, NULL, ctx);
+  if (k == 0 || n == 0 || (uint64_t)n > (uint64_t)k * d) {
+    return n == 0 ? 1 : 0;
+  }
+  return compute_bic_with_sums(reflected_total(n, k, d), k, d, NULL, ctx);
 }
 
 uint32_t compute_acc(uintx *rop, const uint32_t n, const uint32_t k,

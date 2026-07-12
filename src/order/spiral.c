@@ -12,8 +12,8 @@ void spiral_unrank(uint32_t *rop, const uint32_t n, const uint32_t k,
 
   for (uint32_t i = k - 1; i > 0; rop[i] = p, --i, it_n -= p) {
     uint32_t min_p = 0;
-    uintx max_rem = (uintx)i * d;
-    if ((uintx)it_n > max_rem) {
+    uint64_t max_rem = (uint64_t)i * d;
+    if ((uint64_t)it_n > max_rem) {
       min_p = it_n - (uint32_t)max_rem;
     }
     uint32_t max_p = (it_n < d) ? it_n : d;
@@ -68,8 +68,8 @@ uintx spiral_rank(const uint32_t n, const uint32_t k, const uint32_t d,
   for (uint32_t i = k - 1; i > 0; it_n -= comb[i], --i) {
     uint32_t target = comb[i];
     uint32_t min_p = 0;
-    uintx max_rem = (uintx)i * d;
-    if ((uintx)it_n > max_rem) {
+    uint64_t max_rem = (uint64_t)i * d;
+    if ((uint64_t)it_n > max_rem) {
       min_p = it_n - (uint32_t)max_rem;
     }
     uint32_t max_p = (it_n < d) ? it_n : d;

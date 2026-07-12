@@ -13,7 +13,7 @@ static void path_spiral_init(bic_path_state_t *s, uint32_t n, uint32_t k_l,
   uint32_t min_wr = n - max_wl;
   uint32_t max_wr = n - min_wl;
 
-  uint32_t mean_wr = (uint32_t)((uintx)n * k_r / (k_l + k_r));
+  uint32_t mean_wr = (uint32_t)((uint64_t)n * k_r / (k_l + k_r));
   if (mean_wr < min_wr) {
     mean_wr = min_wr;
   }
