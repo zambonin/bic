@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "extra.h"
@@ -37,7 +38,22 @@ uintx random_rank(const uint32_t n, const uint32_t k, const uint32_t d) {
   uintx rank = import_from_unsigned_char(message, len);
 
   free(message);
-  return rank % compute_bic_no_cache(n, k, d);
+
+  /* BIC(n, k, d) == 0 means no composition exists, and `rank % 0` is a SIGFPE --
+     which is how this failed before: a core dump with no message, from inside
+     libgcc's __divmodbitint4. It cannot happen through a correct caller, so do
+     not paper over it with a fallback value; fail where the bad parameters are
+     visible. */
+  const uintx total = compute_bic_no_cache(n, k, d);
+  if (total == 0) {
+    fprintf(stderr,
+            "random_rank: no composition of n=%u into k=%u parts of size <= %u "
+            "exists, so there is no rank to draw.\n",
+            n, k, d);
+    abort();
+  }
+
+  return rank % total;
 }
 
 uintx import_from_unsigned_char(const uint8_t *bytes, const size_t len) {

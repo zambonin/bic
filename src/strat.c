@@ -29,6 +29,12 @@ bool min_n(const uint32_t val, const void *ctx) {
 void mingen(const uint32_t m, uint32_t *n, const uint32_t k, uint32_t *d) {
 
   if (k <= 1 || (m >= ((k - 1) * (32 - lg(k - 1))))) {
+    /* No (n, d) can encode m bits in k parts. Say so: callers retry on *n == 0,
+       and the early return used to leave *n and *d holding whatever the previous
+       call left there -- a stale n and d paired with a fresh k, which is a triple
+       admitting no composition at all. */
+    *n = 0;
+    *d = 0;
     return;
   }
 
@@ -54,6 +60,12 @@ bool min_d(const uint32_t val, const void *ctx) {
 
 void minver(const uint32_t m, uint32_t *n, const uint32_t k, uint32_t *d) {
   if (k <= 1 || (m >= ((k - 1) * (32 - lg(k - 1))))) {
+    /* No (n, d) can encode m bits in k parts. Say so: callers retry on *n == 0,
+       and the early return used to leave *n and *d holding whatever the previous
+       call left there -- a stale n and d paired with a fresh k, which is a triple
+       admitting no composition at all. */
+    *n = 0;
+    *d = 0;
     return;
   }
 
