@@ -106,16 +106,20 @@ uintx dir_access(const uint32_t row, const uint32_t col, const uint32_t d,
                  const uint32_t l, const bic_ctx_t ctx) {
   if (ctx->cache_type == BIC_CACHE_ACC ||
       ctx->cache_type == BIC_CACHE_SMALL_ACC) {
-    hit();
     if (ctx->cache_type == BIC_CACHE_ACC) {
+      if (l == 0) {
+        return g_acc_ctx.dir(row, col, d, l, ctx);
+      }
+      hit();
       uint32_t len = 0;
       uintx *ptr = acc_cache_get_ptr(row, col, &len, ctx);
-      if (ptr != NULL && l < len) {
+      if (ptr != NULL && l <= len) {
         const size_t index = ptr - ctx->acc_cache->data;
-        count(index + l);
+        count(index + l - 1);
         on_target(BIC_CACHE_ACC);
       }
     } else if (ctx->cache_type == BIC_CACHE_SMALL_ACC) {
+      hit();
       uintx *ptr = small_acc_get_val_ptr(col, l, row, ctx);
       if (ptr != NULL) {
         count(ptr - ctx->small_acc_cache->data);
@@ -226,8 +230,9 @@ void print_cache_heatmap_scomb(const bic_ctx_t ctx) {
 
 void print_cache_heatmap_acc(const bic_ctx_t ctx) {
   const cache_t *c = ctx->acc_cache;
+  const uint32_t columns = c->col_map ? c->col_map_size : c->cols;
   for (uint32_t row = 0; row < c->rows; row++) {
-    for (uint32_t col = 0; col < c->cols; col++) {
+    for (uint32_t col = 0; col < columns; col++) {
       uint32_t len = 0;
       uintx *ptr = acc_cache_get_ptr(row, col, &len, ctx);
       if (ptr == NULL) {

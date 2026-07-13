@@ -64,13 +64,13 @@ void colex_unrank_acc_linear(uint32_t *rop, const uint32_t n, const uint32_t k,
   uintx rank = r;
   uint32_t part = 0;
   uintx count = 0;
-  uintx *sums = uintx_alloc(d + 3);
+  uintx *sums = uintx_alloc((size_t)min(n, d) + 1);
 
   for (uint32_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
     (void)ctx->acc(sums, it_n, i, d, ctx);
-    for (part = 0; count = sums[part + 1], rank >= count; ++part) {
+    for (part = 0; count = sums[part], rank >= count; ++part) {
     }
-    rank -= sums[part];
+    rank -= part == 0 ? 0 : sums[part - 1];
   }
 
   rop[0] = it_n;
@@ -83,12 +83,12 @@ void colex_unrank_acc_bisect(uint32_t *rop, const uint32_t n, const uint32_t k,
   uint32_t it_n = n;
   uintx rank = r;
   uint32_t part = 0;
-  uintx *sums = uintx_alloc(d + 3);
+  uintx *sums = uintx_alloc((size_t)min(n, d) + 1);
 
   for (uint32_t i = k - 1; i > 0; rop[i] = part, --i, it_n -= part) {
     size_t length = ctx->acc(sums, it_n, i, d, ctx);
-    part = bsearch_insertion(&rank, sums, length, sizeof(uintx));
-    rank -= sums[part];
+    part = (uint32_t)uintx_upper_bound(sums, length, &rank);
+    rank -= part == 0 ? 0 : sums[part - 1];
   }
 
   rop[0] = it_n;

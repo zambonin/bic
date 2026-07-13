@@ -3,9 +3,15 @@
 uintx *acc_cache_get_ptr(const uint32_t n, const uint32_t k, uint32_t *len,
                          const bic_ctx_t ctx) {
   const cache_t *c = ctx->acc_cache;
+  if (len != NULL) {
+    *len = 0;
+  }
+  if (c == NULL || n >= c->rows) {
+    return NULL;
+  }
   uint32_t col_idx = get_mapped_col(c, k);
 
-  if (col_idx == UINT32_MAX) {
+  if (col_idx >= c->cols) {
     return NULL;
   }
 
@@ -15,14 +21,16 @@ uintx *acc_cache_get_ptr(const uint32_t n, const uint32_t k, uint32_t *len,
     *len = m.length;
   }
 
-  return &(c->data[m.offset]);
+  return m.length == 0 ? NULL : &(c->data[m.offset]);
 }
 
 uint32_t acc_cache_get(uintx *rop, const uint32_t n, const uint32_t k,
                        const uint32_t d, const bic_ctx_t ctx) {
-  (void)d;
   uint32_t len = 0;
   const uintx *source = acc_cache_get_ptr(n, k, &len, ctx);
+  if (source == NULL) {
+    return compute_acc(rop, n, k, d, ctx);
+  }
 
   for (uint32_t i = 0; i < len; ++i) {
     rop[i] = source[i];
@@ -33,9 +41,13 @@ uint32_t acc_cache_get(uintx *rop, const uint32_t n, const uint32_t k,
 
 uintx dir_cache_get(const uint32_t n, const uint32_t k, const uint32_t d,
                     const uint32_t l, const bic_ctx_t ctx) {
-  (void)d;
-  const uintx *slice = acc_cache_get_ptr(n, k, NULL, ctx);
-  return slice[l];
+  if (l == 0) {
+    return 0;
+  }
+  uint32_t len = 0;
+  const uintx *slice = acc_cache_get_ptr(n, k, &len, ctx);
+  return slice != NULL && l <= len ? slice[l - 1]
+                                   : compute_dir(n, k, d, l, ctx);
 }
 
 size_t acc_cache_length(const uint32_t rows, const uint32_t cols,
@@ -44,7 +56,11 @@ size_t acc_cache_length(const uint32_t rows, const uint32_t cols,
 
   for (uint32_t row = 0; row < rows; ++row) {
     for (uint32_t col = 0; col < cols; ++col) {
-      const uint32_t len = min(row, d) + 2;
+      const uint32_t last = min(row, d);
+      if (last == UINT32_MAX) {
+        return SIZE_MAX;
+      }
+      const uint32_t len = last + 1;
 
       if (meta != NULL) {
         const size_t i = (size_t)row * cols + col;
@@ -96,7 +112,7 @@ uint8_t acc_build_cache(const uint32_t n, const uint32_t k, const uint32_t d,
 
   c->rows = n + 1;
   c->cols = effective_cols;
-  c->depth = d;
+  c->depth = min(n, d) + 1;
   c->d = d;
 
   if (!cache_product_fits(c->rows, c->cols, sizeof(bic_meta_t))) {
@@ -118,7 +134,7 @@ uint8_t acc_build_cache(const uint32_t n, const uint32_t k, const uint32_t d,
     return 1;
   }
 
-  c->data = uintx_alloc(c->length);
+  c->data = uintx_alloc(c->length == 0 ? 1 : c->length);
   if (c->data == NULL) {
     free(H);
     acc_free_cache(ctx);
@@ -131,11 +147,12 @@ uint8_t acc_build_cache(const uint32_t n, const uint32_t k, const uint32_t d,
       uint32_t real_k = (H) ? H[col] : col;
 
       uintx *const slice = acc_cache_get_ptr(row, real_k, &len, ctx);
-      slice[0] = 0;
-      for (uint32_t l = 0; l < len - 1; ++l) {
+      uintx sum = 0;
+      for (uint32_t l = 0; l < len; ++l) {
         const uintx prev =
             (row < l) ? 0 : comb_cache_get(row - l, real_k, d, ctx);
-        slice[l + 1] = slice[l] + prev;
+        sum += prev;
+        slice[l] = sum;
       }
     }
   }

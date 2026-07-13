@@ -16,7 +16,6 @@ void exponential_search(uint32_t *rop, const uint32_t lo, const uint32_t hi,
                         bool (*p)(const uint32_t val, const void *ctx),
                         const void *ctx);
 
-size_t bsearch_insertion(const void *key, const void *base, size_t nel,
-                         size_t width);
+size_t uintx_upper_bound(const uintx *values, size_t count, const uintx *key);
 
 #endif

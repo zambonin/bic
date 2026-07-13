@@ -366,9 +366,8 @@ uint32_t compute_acc(uintx *rop, const uint32_t n, const uint32_t k,
   uint32_t i = 0;
   const uint32_t limit = min(n, d);
 
-  rop[0] = 0;
   for (; i <= limit; ++i) {
-    rop[i + 1] = ctx->dir(n, k, d, i + 1, ctx);
+    rop[i] = ctx->dir(n, k, d, i + 1, ctx);
   }
 
   return i;

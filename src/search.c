@@ -1,12 +1,6 @@
 #include "search.h"
 #include "math.h"
 
-// https://stackoverflow.com/a/40245287
-typedef struct {
-  const void *key;
-  void *last_visited;
-} bsearch_ctx_t;
-
 void linear_search(uint32_t *rop, const uint32_t lo, const uint32_t hi,
                    bool (*p)(const uint32_t, const void *), const void *ctx) {
   uint32_t i;
@@ -55,36 +49,15 @@ void exponential_search(uint32_t *rop, const uint32_t lo, const uint32_t hi,
   binary_search_first_true(rop, start, end, p, ctx);
 }
 
-int cmp(const void *c, const void *d) {
-  uintx a = *(uintx *)c;
-  uintx b = *(uintx *)d;
-
-  if (a < b) {
-    return -1;
+size_t uintx_upper_bound(const uintx *values, size_t count, const uintx *key) {
+  size_t lo = 0, hi = count;
+  while (lo < hi) {
+    const size_t mid = lo + (hi - lo) / 2;
+    if (values[mid] <= *key) {
+      lo = mid + 1;
+    } else {
+      hi = mid;
+    }
   }
-
-  if (a >= b) {
-    return 1;
-  }
-
-  return 0;
-}
-
-int bsearch_insertion_compare(const void *a, const void *b) {
-  bsearch_ctx_t *state = (bsearch_ctx_t *)a;
-  state->last_visited = (void *)b;
-  return cmp(state->key, b);
-}
-
-size_t bsearch_insertion(const void *key, const void *base, size_t nel,
-                         size_t width) {
-  bsearch_ctx_t state = {key, NULL};
-  bsearch(&state, base, nel, width, bsearch_insertion_compare);
-
-  uintx *last = (uintx *)state.last_visited;
-  if (*((uintx *)key) < *last) {
-    --last;
-  }
-
-  return last - (uintx *)base;
+  return lo;
 }

@@ -57,10 +57,13 @@ static uint32_t acc_hit(uintx *rop, const uint32_t n, const uint32_t k,
 static uintx dir_hit(const uint32_t n, const uint32_t k, const uint32_t d,
                      const uint32_t l, const bic_ctx_t ctx) {
   if (ctx->cache_type == BIC_CACHE_ACC) {
+    if (l == 0) {
+      return g_hit.dir(n, k, d, l, ctx);
+    }
     g_hit.total++;
     uint32_t len = 0;
     uintx *ptr = acc_cache_get_ptr(n, k, &len, ctx);
-    if (ptr != NULL && l < len) {
+    if (ptr != NULL && l <= len) {
       g_hit.hits++;
     }
   } else if (ctx->cache_type == BIC_CACHE_SMALL_ACC) {
