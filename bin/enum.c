@@ -3,7 +3,7 @@
 #include "extra.h"
 
 int32_t main(int32_t argc, char **argv) {
-  bool error = false;
+  bic_error_t error = BIC_SUCCESS;
   uint32_t n = 0;
   uint32_t k = 0;
   uint32_t d = 0;
@@ -14,17 +14,23 @@ int32_t main(int32_t argc, char **argv) {
       {&opt_order, &order}, {NULL, NULL},
   };
 
-  if (parse_args(argc, argv, options) != 0) {
-    return EXIT_FAILURE;
+  error = parse_args(argc, argv, options);
+  if (error != BIC_SUCCESS) {
+    return error;
   }
 
   bic_ctx_t ctx = bic_ctx_init();
   uint32_t *comp = (uint32_t *)malloc(k * sizeof(uint32_t));
 
-  if (k == 0 || order == NULL || (uint64_t)n > (uint64_t)k * d || ctx == NULL ||
-      bic_ctx_set_order_by_name(order, ctx) || comp == NULL) {
+  if (ctx == NULL || comp == NULL) {
+    error = BIC_ERROR_ALLOCATION;
+    goto cleanup;
+  }
+
+  if (k == 0 || order == NULL || (uint64_t)n > (uint64_t)k * d ||
+      bic_ctx_set_order_by_name(order, ctx)) {
     print_help(argv[0], options);
-    error = true;
+    error = BIC_ERROR_ARGUMENT;
     goto cleanup;
   }
 

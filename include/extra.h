@@ -39,10 +39,11 @@ uintx import_from_unsigned_char(const uint8_t *bytes, const size_t len);
 void check_valid_bounded_composition(const uint32_t *c, const uint32_t n,
                                      const uint32_t k, const uint32_t d);
 
-void bic_run_round_trips(const uint32_t n, const uint32_t k, const uint32_t d,
-                         const uint32_t iterations, long double *utime,
-                         long double *ucycles, long double *rtime,
-                         long double *rcycles, const bic_ctx_t ctx);
+bic_error_t bic_run_round_trips(const uint32_t n, const uint32_t k,
+                                const uint32_t d, const uint32_t iterations,
+                                long double *utime, long double *ucycles,
+                                long double *rtime, long double *rcycles,
+                                const bic_ctx_t ctx);
 
 void bic_print_config(const uint32_t n, const uint32_t k, const uint32_t d,
                       const bic_ctx_t ctx);
@@ -55,7 +56,7 @@ typedef struct cli_option_def_s {
   struct option opt;
   const char *description;
   const char *type_description;
-  uint8_t (*parser)(void *value, const char *arg);
+  bic_error_t (*parser)(void *value, const char *arg);
   const char **sub_option_names;
   const char **sub_option_infos;
   size_t num_sub_options;
@@ -66,13 +67,13 @@ typedef struct {
   void *value;
 } cli_option_t;
 
-uint8_t parse_args(int32_t argc, char **argv, cli_option_t options[]);
+bic_error_t parse_args(int32_t argc, char **argv, cli_option_t options[]);
 
-uint8_t parse_uint16(void *value, const char *arg);
+bic_error_t parse_uint16(void *value, const char *arg);
 
-uint8_t parse_uint32(void *value, const char *arg);
+bic_error_t parse_uint32(void *value, const char *arg);
 
-uint8_t parse_string(void *value, const char *arg);
+bic_error_t parse_string(void *value, const char *arg);
 
 void print_help(const char *name, cli_option_t options[]);
 

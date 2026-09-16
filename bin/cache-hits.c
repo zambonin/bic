@@ -97,7 +97,7 @@ static void teardown_wrappers(bic_ctx_t ctx) {
 }
 
 int32_t main(int32_t argc, char **argv) {
-  int error = 0;
+  bic_error_t error = BIC_SUCCESS;
   uint32_t n = 0;
   uint32_t k = 0;
   uint32_t d = 0;
@@ -121,47 +121,49 @@ int32_t main(int32_t argc, char **argv) {
       {NULL, NULL},
   };
 
-  if (parse_args(argc, argv, options) != 0) {
-    return EXIT_FAILURE;
+  error = parse_args(argc, argv, options);
+  if (error != BIC_SUCCESS) {
+    return error;
   }
   srandom(seed);
 
   bic_ctx_t ctx = bic_ctx_init();
   if (ctx == NULL) {
-    return 1;
+    return BIC_ERROR_ALLOCATION;
   }
-  if (k == 0 || bic_ctx_set_order_by_name(order, ctx) ||
+  if (k == 0 || iterations == 0 || bic_ctx_set_order_by_name(order, ctx) ||
       bic_ctx_set_cache_by_name(cache, ctx) ||
       bic_ctx_set_strategy_by_name(strategy, ctx)) {
     print_help(argv[0], options);
-    error = 1;
+    error = BIC_ERROR_ARGUMENT;
     goto cleanup;
   }
 
   if (m != 0) {
     bic_run_strategy(m, &n, k, &d, ctx);
     if (n == 0 || n == UINT32_MAX) {
-      error = 1;
+      error = BIC_ERROR_RANGE;
       goto cleanup;
     }
   }
 
   if ((uint64_t)n > (uint64_t)k * d) {
     print_help(argv[0], options);
-    error = 1;
+    error = BIC_ERROR_ARGUMENT;
     goto cleanup;
   }
 
-  if (bic_precompute(n, k, d, ctx) != 0) {
-    fprintf(stderr, "precompute failed for n=%u k=%u d=%u cache=%s\n", n, k, d,
-            cache);
-    error = 1;
+  error = bic_precompute(n, k, d, ctx);
+  if (error != BIC_SUCCESS) {
     goto cleanup;
   }
 
   setup_wrappers(ctx);
-  bic_run_round_trips(n, k, d, iterations, NULL, NULL, NULL, NULL, ctx);
+  error = bic_run_round_trips(n, k, d, iterations, NULL, NULL, NULL, NULL, ctx);
   teardown_wrappers(ctx);
+  if (error != BIC_SUCCESS) {
+    goto cleanup;
+  }
 
   if (g_hit.total == 0) {
     printf("n=%u k=%u d=%u cache=%s: no cache lookups recorded\n", n, k, d,

@@ -8,15 +8,16 @@
 static const uint32_t K = 32;
 static const uint32_t D = 255;
 
-int32_t run_ratio_sweep(uint32_t iterations) {
-  int32_t error = 1;
+bic_error_t run_ratio_sweep(uint32_t iterations) {
+  bic_error_t error = BIC_SUCCESS;
   bic_ctx_t ctx = bic_ctx_init();
   if (ctx == NULL) {
-    return 1;
+    return BIC_ERROR_ALLOCATION;
   }
 
   bic_ctx_set_cache(BIC_CACHE_COMB, ctx);
-  if (bic_precompute(K * D, K, D, ctx) != 0) {
+  error = bic_precompute(K * D, K, D, ctx);
+  if (error != BIC_SUCCESS) {
     goto cleanup;
   }
 
@@ -31,6 +32,7 @@ int32_t run_ratio_sweep(uint32_t iterations) {
     if (ranks == NULL || comp == NULL) {
       free(comp);
       uintx_free(ranks);
+      error = BIC_ERROR_ALLOCATION;
       goto cleanup;
     }
     const uintx count = ctx->comp(n, K, D, ctx);
@@ -39,7 +41,8 @@ int32_t run_ratio_sweep(uint32_t iterations) {
     }
 
     for (uint8_t i = 0; i < BIC_ORDER_LENGTH; ++i) {
-      if (bic_ctx_set_order(i, ctx) != 0) {
+      error = bic_ctx_set_order(i, ctx);
+      if (error != BIC_SUCCESS) {
         free(comp);
         uintx_free(ranks);
         goto cleanup;
@@ -62,7 +65,7 @@ int32_t run_ratio_sweep(uint32_t iterations) {
     uintx_free(ranks);
   }
 
-  error = 0;
+  error = BIC_SUCCESS;
 
 cleanup:
   bic_free_precomputed(ctx);
@@ -80,8 +83,12 @@ int32_t main(int32_t argc, char **argv) {
       {NULL, NULL},
   };
 
-  if (parse_args(argc, argv, options) != 0 || iterations == 0) {
-    return EXIT_FAILURE;
+  const bic_error_t error = parse_args(argc, argv, options);
+  if (error != BIC_SUCCESS) {
+    return error;
+  }
+  if (iterations == 0) {
+    return BIC_ERROR_ARGUMENT;
   }
   srandom(seed);
 

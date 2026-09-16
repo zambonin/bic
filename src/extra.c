@@ -33,7 +33,7 @@ uintx random_rank(const uint32_t n, const uint32_t k, const uint32_t d) {
 
 uintx random_rank_count(const uintx count) {
   if (count == 0) {
-    abort();
+    exit(BIC_ERROR_ARGUMENT);
   }
 
   uint16_t len = (1 + (uint16_t)lg(count)) / sizeof(uint64_t);
@@ -71,13 +71,14 @@ uintx import_from_unsigned_char(const uint8_t *bytes, const size_t len) {
   return rop;
 }
 
-void bic_run_round_trips(const uint32_t n, const uint32_t k, const uint32_t d,
-                         const uint32_t iterations, long double *utime,
-                         long double *ucycles, long double *rtime,
-                         long double *rcycles, const bic_ctx_t ctx) {
+bic_error_t bic_run_round_trips(const uint32_t n, const uint32_t k,
+                                const uint32_t d, const uint32_t iterations,
+                                long double *utime, long double *ucycles,
+                                long double *rtime, long double *rcycles,
+                                const bic_ctx_t ctx) {
   uint32_t *comp = (uint32_t *)malloc(k * sizeof(uint32_t));
   if (comp == NULL) {
-    return;
+    return BIC_ERROR_ALLOCATION;
   }
 
   for (uint32_t it = 0; it < iterations; ++it) {
@@ -106,12 +107,16 @@ void bic_run_round_trips(const uint32_t n, const uint32_t k, const uint32_t d,
       rr = bic_rank(n, k, d, comp, ctx);
     }
 
-    assert(r == rr);
+    if (r != rr) {
+      free(comp);
+      return BIC_ERROR_VALIDATION;
+    }
 
     check_valid_bounded_composition(comp, n, k, d);
   }
 
   free(comp);
+  return BIC_SUCCESS;
 }
 
 void bic_print_config(const uint32_t n, const uint32_t k, const uint32_t d,
@@ -133,37 +138,40 @@ void bic_print_perf_stats(const uint32_t it, const long double utime,
          it, utime / it, ucycles / it, rtime / it, rcycles / it);
 }
 
-uint8_t parse_uint16(void *value, const char *arg) {
-  if (arg == NULL || *arg == '\0' || strchr(arg, '-')) {
-    return 1;
+bic_error_t parse_uint16(void *value, const char *arg) {
+  if (value == NULL || arg == NULL || *arg == '\0' || strchr(arg, '-')) {
+    return BIC_ERROR_ARGUMENT;
   }
   char *end;
   errno = 0;
   const unsigned long long parsed = strtoull(arg, &end, 0);
   if (errno != 0 || end == arg || *end != '\0' || parsed > UINT16_MAX) {
-    return 1;
+    return BIC_ERROR_ARGUMENT;
   }
   *(uint16_t *)value = (uint16_t)parsed;
-  return 0;
+  return BIC_SUCCESS;
 }
 
-uint8_t parse_uint32(void *value, const char *arg) {
-  if (arg == NULL || *arg == '\0' || strchr(arg, '-')) {
-    return 1;
+bic_error_t parse_uint32(void *value, const char *arg) {
+  if (value == NULL || arg == NULL || *arg == '\0' || strchr(arg, '-')) {
+    return BIC_ERROR_ARGUMENT;
   }
   char *end;
   errno = 0;
   const unsigned long long parsed = strtoull(arg, &end, 0);
   if (errno != 0 || end == arg || *end != '\0' || parsed > UINT32_MAX) {
-    return 1;
+    return BIC_ERROR_ARGUMENT;
   }
   *(uint32_t *)value = (uint32_t)parsed;
-  return 0;
+  return BIC_SUCCESS;
 }
 
-uint8_t parse_string(void *value, const char *arg) {
+bic_error_t parse_string(void *value, const char *arg) {
+  if (value == NULL || arg == NULL) {
+    return BIC_ERROR_ARGUMENT;
+  }
   *(const char **)value = arg;
-  return 0;
+  return BIC_SUCCESS;
 }
 
 void print_help(const char *name, cli_option_t options[]) {
@@ -178,7 +186,7 @@ void print_help(const char *name, cli_option_t options[]) {
       snprintf(flag, 4, "   ");
     }
 
-    char req[12];
+    char req[12] = "";
     if (def->opt.has_arg == required_argument) {
       snprintf(req, 12, "=<%s>", def->type_description);
     }
@@ -198,7 +206,7 @@ void print_help(const char *name, cli_option_t options[]) {
   }
 }
 
-uint8_t parse_args(int32_t argc, char **argv, cli_option_t options[]) {
+bic_error_t parse_args(int32_t argc, char **argv, cli_option_t options[]) {
   size_t count = 0;
   while (options[count].def) {
     count++;
@@ -210,10 +218,12 @@ uint8_t parse_args(int32_t argc, char **argv, cli_option_t options[]) {
   if (long_opt == NULL || short_opt == NULL) {
     free(long_opt);
     free(short_opt);
-    return 1;
+    return BIC_ERROR_ALLOCATION;
   }
   char *ptr = short_opt;
-  uint8_t error = 0;
+  bic_error_t error = BIC_SUCCESS;
+  const int32_t saved_opterr = opterr;
+  opterr = 0;
 
   for (size_t i = 0; i < count; ++i) {
     long_opt[i] = options[i].def->opt;
@@ -245,17 +255,21 @@ uint8_t parse_args(int32_t argc, char **argv, cli_option_t options[]) {
 
       const char *arg =
           long_opt[i].has_arg == required_argument ? optarg : NULL;
-      if (options[i].def->parser(options[i].value, arg) != 0) {
-        fprintf(stderr, "Invalid value for --%s: %s\n", long_opt[i].name, arg);
-        error = 1;
-      }
+      error = options[i].def->parser(options[i].value, arg);
       break;
     }
     if (!matched) {
-      error = 1;
+      error = BIC_ERROR_ARGUMENT;
+    }
+    if (error != BIC_SUCCESS) {
+      break;
     }
   }
 
+  opterr = saved_opterr;
+  if (error == BIC_SUCCESS && optind < argc) {
+    error = BIC_ERROR_ARGUMENT;
+  }
   free(long_opt);
   free(short_opt);
   return error;

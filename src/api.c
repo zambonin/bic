@@ -114,17 +114,21 @@ bool match_name(const uint32_t i, const void *ctx) {
   return (*(const uint8_t *)s1 - *(const uint8_t *)s2) == 0;
 }
 
-uint8_t bic_ctx_set_generic_by_name(const char *name, const find_ctx_t find_ctx,
-                                    bic_ctx_t ctx) {
+bic_error_t bic_ctx_set_generic_by_name(const char *name,
+                                        const find_ctx_t find_ctx,
+                                        bic_ctx_t ctx) {
+  if (ctx == NULL || name == NULL) {
+    return BIC_ERROR_ARGUMENT;
+  }
   uint32_t idx;
   name_search_ctx_t c = {.names = find_ctx.names, .target = name};
   linear_search(&idx, 0, find_ctx.length, match_name, &c);
   return find_ctx.setter(idx, ctx);
 }
 
-uint8_t bic_ctx_set_order(const uint8_t order, bic_ctx_t ctx) {
-  if (order >= BIC_ORDER_LENGTH) {
-    return 1;
+bic_error_t bic_ctx_set_order(const uint8_t order, bic_ctx_t ctx) {
+  if (ctx == NULL || order >= BIC_ORDER_LENGTH) {
+    return BIC_ERROR_ARGUMENT;
   }
 
   ctx->unrank = order_dispatch[order].default_unrank;
@@ -133,101 +137,104 @@ uint8_t bic_ctx_set_order(const uint8_t order, bic_ctx_t ctx) {
   ctx->unrank_alg = BIC_ALG_DEFAULT;
   ctx->rank_alg = BIC_RANK_ALG_DEFAULT;
 
-  return 0;
+  return BIC_SUCCESS;
 }
 
-uint8_t bic_ctx_set_order_by_name(const char *name, bic_ctx_t ctx) {
+bic_error_t bic_ctx_set_order_by_name(const char *name, bic_ctx_t ctx) {
   return bic_ctx_set_generic_by_name(name, bic_order_find_ctx, ctx);
 }
 
-uint8_t bic_ctx_set_unrank_alg(const uint8_t alg, bic_ctx_t ctx) {
-  if (ctx->order >= BIC_ORDER_LENGTH) {
-    return 1;
+bic_error_t bic_ctx_set_unrank_alg(const uint8_t alg, bic_ctx_t ctx) {
+  if (ctx == NULL || ctx->order >= BIC_ORDER_LENGTH) {
+    return BIC_ERROR_ARGUMENT;
   }
 
   if (alg == BIC_ALG_DEFAULT) {
     ctx->unrank = order_dispatch[ctx->order].default_unrank;
     ctx->unrank_alg = BIC_ALG_DEFAULT;
-    return 0;
+    return BIC_SUCCESS;
   } else if (alg == BIC_ALG_GENERIC) {
     ctx->unrank = order_dispatch[ctx->order].generic_unrank;
     ctx->unrank_alg = BIC_ALG_GENERIC;
-    return 0;
+    return BIC_SUCCESS;
   } else if (ctx->order == BIC_ORDER_COLEX) {
     if (alg == BIC_ALG_PS || alg == BIC_ALG_AL || alg == BIC_ALG_AB ||
         alg == BIC_ALG_AD) {
       ctx->unrank = colex_unrank_algs[alg];
       ctx->unrank_alg = (bic_unrank_alg_t)alg;
-      return 0;
+      return BIC_SUCCESS;
     }
   }
 
-  return 1;
+  return BIC_ERROR_ARGUMENT;
 }
 
-uint8_t bic_ctx_set_unrank_alg_by_name(const char *name, bic_ctx_t ctx) {
+bic_error_t bic_ctx_set_unrank_alg_by_name(const char *name, bic_ctx_t ctx) {
   return bic_ctx_set_generic_by_name(name, bic_unrank_alg_find_ctx, ctx);
 }
 
-uint8_t bic_ctx_set_rank_alg(const uint8_t alg, bic_ctx_t ctx) {
-  if (ctx->order >= BIC_ORDER_LENGTH) {
-    return 1;
+bic_error_t bic_ctx_set_rank_alg(const uint8_t alg, bic_ctx_t ctx) {
+  if (ctx == NULL || ctx->order >= BIC_ORDER_LENGTH) {
+    return BIC_ERROR_ARGUMENT;
   }
 
   if (alg == BIC_RANK_ALG_DEFAULT) {
     ctx->rank = order_dispatch[ctx->order].default_rank;
     ctx->rank_alg = BIC_RANK_ALG_DEFAULT;
-    return 0;
+    return BIC_SUCCESS;
   } else if (alg == BIC_RANK_ALG_GENERIC) {
     ctx->rank = order_dispatch[ctx->order].generic_rank;
     ctx->rank_alg = BIC_RANK_ALG_GENERIC;
-    return 0;
+    return BIC_SUCCESS;
   } else if (ctx->order == BIC_ORDER_COLEX) {
     if (alg == BIC_RANK_ALG_AD) {
       ctx->rank = colex_rank_acc_direct;
       ctx->rank_alg = BIC_RANK_ALG_AD;
-      return 0;
+      return BIC_SUCCESS;
     }
   }
 
-  return 1;
+  return BIC_ERROR_ARGUMENT;
 }
 
-uint8_t bic_ctx_set_rank_alg_by_name(const char *name, bic_ctx_t ctx) {
+bic_error_t bic_ctx_set_rank_alg_by_name(const char *name, bic_ctx_t ctx) {
   return bic_ctx_set_generic_by_name(name, bic_rank_alg_find_ctx, ctx);
 }
 
-uint8_t bic_ctx_set_cache(const uint8_t cache, bic_ctx_t ctx) {
-  if (cache >= BIC_CACHE_LENGTH) {
-    return 1;
+bic_error_t bic_ctx_set_cache(const uint8_t cache, bic_ctx_t ctx) {
+  if (ctx == NULL || cache >= BIC_CACHE_LENGTH) {
+    return BIC_ERROR_ARGUMENT;
   }
 
   ctx->cache_type = (bic_cache_t)cache;
-  return 0;
+  return BIC_SUCCESS;
 }
 
-uint8_t bic_ctx_set_cache_by_name(const char *name, bic_ctx_t ctx) {
+bic_error_t bic_ctx_set_cache_by_name(const char *name, bic_ctx_t ctx) {
   return bic_ctx_set_generic_by_name(name, bic_cache_find_ctx, ctx);
 }
 
-uint8_t bic_ctx_set_strategy(const uint8_t strategy, bic_ctx_t ctx) {
-  if (strategy >= BIC_STRATEGY_LENGTH) {
-    return 1;
+bic_error_t bic_ctx_set_strategy(const uint8_t strategy, bic_ctx_t ctx) {
+  if (ctx == NULL || strategy >= BIC_STRATEGY_LENGTH) {
+    return BIC_ERROR_ARGUMENT;
   }
 
   ctx->search = strategy_dispatch[strategy];
   ctx->strategy = (bic_strategy_t)strategy;
-  return 0;
+  return BIC_SUCCESS;
 }
 
-uint8_t bic_ctx_set_strategy_by_name(const char *name, bic_ctx_t ctx) {
+bic_error_t bic_ctx_set_strategy_by_name(const char *name, bic_ctx_t ctx) {
   return bic_ctx_set_generic_by_name(name, bic_strategy_find_ctx, ctx);
 }
 
-uint8_t bic_ctx_set_defaults(bic_ctx_t ctx) {
+bic_error_t bic_ctx_set_defaults(bic_ctx_t ctx) {
+  if (ctx == NULL) {
+    return BIC_ERROR_ARGUMENT;
+  }
   bic_ctx_set_order(BIC_ORDER_COLEX, ctx);
   ctx->cache_type = BIC_CACHE_COMB;
-  return 0;
+  return BIC_SUCCESS;
 }
 
 void bic_run_strategy(const uint32_t m, uint32_t *n, const uint32_t k,
@@ -251,12 +258,16 @@ uintx bic_rank(const uint32_t n, const uint32_t k, const uint32_t d,
   return ctx->rank(n, k, d, comp, ctx);
 }
 
-uint8_t bic_precompute(const uint32_t n, const uint32_t k, const uint32_t d,
-                       bic_ctx_t ctx) {
-  if (k == 0) {
-    return 0;
+bic_error_t bic_precompute(const uint32_t n, const uint32_t k, const uint32_t d,
+                           bic_ctx_t ctx) {
+  if (ctx == NULL) {
+    return BIC_ERROR_ARGUMENT;
   }
-  return build_cache_rec(ctx->cache_type, n, k, d, ctx);
+  if (k == 0) {
+    return BIC_SUCCESS;
+  }
+  return build_cache_rec(ctx->cache_type, n, k, d, ctx) ? BIC_ERROR_ALLOCATION
+                                                        : BIC_SUCCESS;
 }
 
 void bic_free_precomputed(bic_ctx_t ctx) { free_all_caches(ctx); }

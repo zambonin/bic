@@ -159,15 +159,18 @@ static const char *access_infos[BIC_ACCESS_LENGTH] = {
     "both operations (default)",
 };
 
-static uint8_t parse_access(void *value, const char *arg) {
+static bic_error_t parse_access(void *value, const char *arg) {
+  if (value == NULL || arg == NULL) {
+    return BIC_ERROR_ARGUMENT;
+  }
   for (uint8_t i = 0; i < BIC_ACCESS_LENGTH; ++i) {
     const int32_t cmp = strcmp(access_names[i], arg);
     if (cmp == 0) {
       *(bic_access_t *)value = (bic_access_t)i;
-      return 0;
+      return BIC_SUCCESS;
     }
   }
-  return 1;
+  return BIC_ERROR_ARGUMENT;
 }
 
 static const cli_option_def_t opt_operation = {
@@ -291,12 +294,13 @@ static void teardown_wrappers(bic_ctx_t ctx) {
   ctx->dir = g_acc_ctx.dir;
 }
 
-static int measure_accesses(uint32_t n, uint32_t k, uint32_t d,
-                            uint32_t iterations, const bic_access_t operation,
-                            bic_ctx_t ctx) {
+static bic_error_t measure_accesses(uint32_t n, uint32_t k, uint32_t d,
+                                    uint32_t iterations,
+                                    const bic_access_t operation,
+                                    bic_ctx_t ctx) {
   uint32_t *parts = (uint32_t *)malloc((size_t)k * sizeof(*parts));
   if (parts == NULL) {
-    return 1;
+    return BIC_ERROR_ALLOCATION;
   }
 
   const uintx total = ctx->comp(n, k, d, ctx);
@@ -320,15 +324,15 @@ static int measure_accesses(uint32_t n, uint32_t k, uint32_t d,
     }
     if (r != rr) {
       free(parts);
-      return 1;
+      return BIC_ERROR_VALIDATION;
     }
     check_valid_bounded_composition(parts, n, k, d);
   }
   free(parts);
-  return 0;
+  return BIC_SUCCESS;
 }
 
-uint8_t allocate_counters(bic_ctx_t ctx) {
+bic_error_t allocate_counters(bic_ctx_t ctx) {
   cache_t *c = NULL;
 
   switch (ctx->cache_type) {
@@ -354,7 +358,7 @@ uint8_t allocate_counters(bic_ctx_t ctx) {
   size_t size = (c != NULL) ? c->length : 0;
   g_acc_ctx.size = size;
   g_acc_ctx.access = (uint32_t *)calloc(size == 0 ? 1 : size, sizeof(uint32_t));
-  return g_acc_ctx.access == NULL;
+  return g_acc_ctx.access == NULL ? BIC_ERROR_ALLOCATION : BIC_SUCCESS;
 }
 
 void print_cache_heatmap(bic_ctx_t ctx) {
@@ -382,7 +386,7 @@ void print_cache_heatmap(bic_ctx_t ctx) {
 void free_counters() { free(g_acc_ctx.access); }
 
 int32_t main(int32_t argc, char **argv) {
-  bool error = false;
+  bic_error_t error = BIC_SUCCESS;
   uint32_t n = 0;
   uint32_t k = 0;
   uint32_t d = 0;
@@ -416,8 +420,9 @@ int32_t main(int32_t argc, char **argv) {
       {NULL, NULL},
   };
 
-  if (parse_args(argc, argv, options) != 0) {
-    return EXIT_FAILURE;
+  error = parse_args(argc, argv, options);
+  if (error != BIC_SUCCESS) {
+    return error;
   }
 
   srandom(seed);
@@ -426,14 +431,18 @@ int32_t main(int32_t argc, char **argv) {
   uint8_t stddev_level = 0;
   bic_ctx_t ctx = bic_ctx_init();
 
-  if (k == 0 || ctx == NULL || iterations == 0 || stddev > UINT8_MAX ||
+  if (ctx == NULL) {
+    return BIC_ERROR_ALLOCATION;
+  }
+
+  if (k == 0 || iterations == 0 || stddev > UINT8_MAX ||
       (uint64_t)n > (uint64_t)k * d || bic_ctx_set_order_by_name(order, ctx) ||
       bic_ctx_set_unrank_alg_by_name(unrank_alg, ctx) ||
       bic_ctx_set_rank_alg_by_name(rank_alg, ctx) ||
       bic_ctx_set_cache_by_name(cache, ctx) ||
       bic_ctx_set_strategy_by_name(strategy, ctx)) {
     print_help(argv[0], options);
-    error = true;
+    error = BIC_ERROR_ARGUMENT;
     goto cleanup_ctx;
   }
 
@@ -442,24 +451,24 @@ int32_t main(int32_t argc, char **argv) {
   if (m != 0) {
     bic_run_strategy(m, &n, k, &d, ctx);
     if (n == 0 || n == UINT32_MAX) {
-      error = true;
+      error = BIC_ERROR_RANGE;
       goto cleanup_ctx;
     }
   }
 
-  if (bic_precompute(n, k, d, ctx) != 0) {
-    error = true;
+  error = bic_precompute(n, k, d, ctx);
+  if (error != BIC_SUCCESS) {
     goto cleanup_precomp;
   }
 
-  if (allocate_counters(ctx)) {
-    error = true;
+  error = allocate_counters(ctx);
+  if (error != BIC_SUCCESS) {
     goto cleanup_precomp;
   }
 
-  if (measure_accesses(n, k, d, iterations, operation, ctx)) {
+  error = measure_accesses(n, k, d, iterations, operation, ctx);
+  if (error != BIC_SUCCESS) {
     free_counters();
-    error = true;
     goto cleanup_precomp;
   }
 

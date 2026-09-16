@@ -28,15 +28,19 @@ int32_t main(int32_t argc, char **argv) {
       {NULL, NULL},
   };
 
-  if (parse_args(argc, argv, options) != 0) {
-    return EXIT_FAILURE;
+  bic_error_t error = parse_args(argc, argv, options);
+  if (error != BIC_SUCCESS) {
+    return error;
   }
 
+  if (iterations == 0 || max_stddev > UINT8_MAX) {
+    return BIC_ERROR_ARGUMENT;
+  }
   srandom(seed);
 
   bic_ctx_t ctx = bic_ctx_init();
   if (ctx == NULL) {
-    return 1;
+    return BIC_ERROR_ALLOCATION;
   }
 
   bic_ctx_set_cache(BIC_CACHE_COMB, ctx);
@@ -53,10 +57,10 @@ int32_t main(int32_t argc, char **argv) {
       gen_small_params_random(&n, &k, &d);
       supported = bic_cache_moments_supported(n, k, d);
     }
-    if (!supported || bic_precompute(n, k, d, ctx) != 0) {
-      fputs("no supported cache-size parameters available\n", stderr);
+    error = supported ? bic_precompute(n, k, d, ctx) : BIC_ERROR_RANGE;
+    if (error != BIC_SUCCESS) {
       bic_ctx_destroy(ctx);
-      return 1;
+      return error;
     }
 
     uint32_t bin_cols = k + 1;

@@ -17,7 +17,7 @@ void gen_small_params_random(uint32_t *n, uint32_t *k, uint32_t *d) {
 }
 
 int32_t main(int32_t argc, char **argv) {
-  int error = 0;
+  bic_error_t error = BIC_SUCCESS;
   uint32_t iterations = 10;
   uint32_t seed = (uint32_t)time(NULL);
 
@@ -27,15 +27,16 @@ int32_t main(int32_t argc, char **argv) {
       {NULL, NULL},
   };
 
-  if (parse_args(argc, argv, options) != 0) {
-    return EXIT_FAILURE;
+  error = parse_args(argc, argv, options);
+  if (error != BIC_SUCCESS) {
+    return error;
   }
 
   srandom(seed);
 
   bic_ctx_t ctx = bic_ctx_init();
   if (ctx == NULL) {
-    return 1;
+    return BIC_ERROR_ALLOCATION;
   }
   bic_ctx_set_cache(BIC_CACHE_COMB, ctx);
 
@@ -52,9 +53,8 @@ int32_t main(int32_t argc, char **argv) {
       gen_small_params_random(&n, &k, &d);
       supported = bic_cache_moments_supported(n, k, d);
     }
-    if (!supported || bic_precompute(n, k, d, ctx) != 0) {
-      fputs("no supported cache-size parameters available\n", stderr);
-      error = 1;
+    error = supported ? bic_precompute(n, k, d, ctx) : BIC_ERROR_RANGE;
+    if (error != BIC_SUCCESS) {
       break;
     }
 
@@ -73,8 +73,7 @@ int32_t main(int32_t argc, char **argv) {
     if (comb_dense == SIZE_MAX || comb_sparse == SIZE_MAX ||
         acc_dense == SIZE_MAX || acc_sparse == SIZE_MAX ||
         scomb_dense == SIZE_MAX || scomb_sparse == SIZE_MAX) {
-      fputs("cache allocation failed\n", stderr);
-      error = 1;
+      error = BIC_ERROR_ALLOCATION;
       bic_free_precomputed(ctx);
       break;
     }

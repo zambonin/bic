@@ -3,7 +3,7 @@
 #include "extra.h"
 
 int32_t main(int32_t argc, char **argv) {
-  bool error = false;
+  bic_error_t error = BIC_SUCCESS;
   uint32_t n = 0;
   uint32_t k = 0;
   uint32_t d = 0;
@@ -38,22 +38,27 @@ int32_t main(int32_t argc, char **argv) {
       {NULL, NULL},
   };
 
-  if (parse_args(argc, argv, options) != 0) {
-    return EXIT_FAILURE;
+  error = parse_args(argc, argv, options);
+  if (error != BIC_SUCCESS) {
+    return error;
   }
 
   srandom(seed);
 
   bic_ctx_t ctx = bic_ctx_init();
 
-  if (k == 0 || ctx == NULL || (uint64_t)n > (uint64_t)k * d ||
-      bic_ctx_set_order_by_name(order, ctx) ||
+  if (ctx == NULL) {
+    return BIC_ERROR_ALLOCATION;
+  }
+
+  if (k == 0 || iterations == 0 || stddev > UINT8_MAX ||
+      (uint64_t)n > (uint64_t)k * d || bic_ctx_set_order_by_name(order, ctx) ||
       bic_ctx_set_unrank_alg_by_name(unrank_alg, ctx) ||
       bic_ctx_set_rank_alg_by_name(rank_alg, ctx) ||
       bic_ctx_set_cache_by_name(cache, ctx) ||
       bic_ctx_set_strategy_by_name(strategy, ctx)) {
     print_help(argv[0], options);
-    error = true;
+    error = BIC_ERROR_ARGUMENT;
     goto cleanup;
   }
 
@@ -62,19 +67,21 @@ int32_t main(int32_t argc, char **argv) {
   if (m != 0) {
     bic_run_strategy(m, &n, k, &d, ctx);
     if (n == 0 || n == UINT32_MAX) {
-      error = true;
+      error = BIC_ERROR_RANGE;
       goto cleanup;
     }
   }
 
-  if (bic_precompute(n, k, d, ctx) != 0) {
-    fputs("unsupported parameters or cache allocation failed\n", stderr);
-    error = true;
+  error = bic_precompute(n, k, d, ctx);
+  if (error != BIC_SUCCESS) {
     goto cleanup;
   }
 
-  bic_run_round_trips(n, k, d, iterations, &utime, &ucycles, &rtime, &rcycles,
-                      ctx);
+  error = bic_run_round_trips(n, k, d, iterations, &utime, &ucycles, &rtime,
+                              &rcycles, ctx);
+  if (error != BIC_SUCCESS) {
+    goto cleanup;
+  }
 
   bic_print_config(n, k, d, ctx);
   bic_print_perf_stats(iterations, utime, ucycles, rtime, rcycles);
@@ -85,5 +92,5 @@ int32_t main(int32_t argc, char **argv) {
 cleanup:
   bic_ctx_destroy(ctx);
 
-  return error ? EXIT_FAILURE : EXIT_SUCCESS;
+  return error;
 }

@@ -4,6 +4,15 @@
 #include "common.h"
 
 typedef enum {
+  BIC_SUCCESS,
+  BIC_ERROR_ARGUMENT,
+  BIC_ERROR_RANGE,
+  BIC_ERROR_ALLOCATION,
+  BIC_ERROR_VALIDATION,
+  BIC_ERROR_SYSTEM,
+} bic_error_t;
+
+typedef enum {
   BIC_ORDER_COLEX,
   BIC_ORDER_GRAY,
   BIC_ORDER_RBO,

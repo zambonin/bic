@@ -145,7 +145,7 @@ void print_perf_header(const task_t *tasks, const size_t count,
 }
 
 int32_t main(int32_t argc, char **argv) {
-  bool error = false;
+  bic_error_t error = BIC_SUCCESS;
   uint32_t m = 0;
   uint32_t k0 = 0;
   uint32_t k1 = 0;
@@ -171,8 +171,9 @@ int32_t main(int32_t argc, char **argv) {
       {NULL, NULL},
   };
 
-  if (parse_args(argc, argv, options) != 0) {
-    return EXIT_FAILURE;
+  error = parse_args(argc, argv, options);
+  if (error != BIC_SUCCESS) {
+    return error;
   }
 
   if ((orders & ~((1u << BIC_ORDER_LENGTH) - 1)) ||
@@ -180,8 +181,7 @@ int32_t main(int32_t argc, char **argv) {
       (caches & ~((1u << BIC_CACHE_LENGTH) - 1)) ||
       (mode & ~BIC_PERF_MODE_ALL) ||
       (rank_algs & ~((1u << BIC_RANK_ALG_LENGTH) - 1))) {
-    fputs("unknown benchmark selection bit\n", stderr);
-    return EXIT_FAILURE;
+    return BIC_ERROR_ARGUMENT;
   }
 
   srandom(seed);
@@ -204,16 +204,20 @@ int32_t main(int32_t argc, char **argv) {
 
   bic_ctx_t ctx = bic_ctx_init();
   if (ctx == NULL) {
-    return EXIT_FAILURE;
+    return BIC_ERROR_ALLOCATION;
   }
   size_t count =
       generate_tasks(NULL, orders, unrank_algs, rank_algs, caches, ctx);
   task_t *tasks = (task_t *)malloc(count * sizeof(task_t));
 
-  if (m == 0 || k0 == 0 || k1 == 0 || count == 0 || ctx == NULL ||
-      tasks == NULL) {
+  if (tasks == NULL) {
+    error = BIC_ERROR_ALLOCATION;
+    goto cleanup;
+  }
+
+  if (m == 0 || k0 == 0 || k1 == 0 || count == 0) {
     print_help(argv[0], options);
-    error = true;
+    error = BIC_ERROR_ARGUMENT;
     goto cleanup;
   }
 
@@ -234,13 +238,21 @@ int32_t main(int32_t argc, char **argv) {
       uint32_t n = 0;
       uint32_t d = 0;
       bic_run_strategy(m, &n, k, &d, ctx);
-      bic_precompute(n, k, d, ctx);
+      const bic_error_t prepared = bic_precompute(n, k, d, ctx);
+      if (prepared != BIC_SUCCESS) {
+        error = prepared;
+        goto cleanup;
+      }
 
       long double ucycles = 0;
       long double rcycles = 0;
 
-      bic_run_round_trips(n, k, d, iterations, NULL, &ucycles, NULL, &rcycles,
-                          ctx);
+      const bic_error_t measured = bic_run_round_trips(
+          n, k, d, iterations, NULL, &ucycles, NULL, &rcycles, ctx);
+      if (measured != BIC_SUCCESS) {
+        error = measured;
+        goto cleanup;
+      }
 
       if (mode & BIC_PERF_MODE_UNRANK) {
         printf(" %.2Lf", ucycles / iterations);
