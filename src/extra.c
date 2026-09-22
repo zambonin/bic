@@ -35,19 +35,32 @@ uintx random_rank_count(const uintx count) {
   if (count == 0) {
     exit(BIC_ERROR_ARGUMENT);
   }
-
-  uint16_t len = (1 + (uint16_t)lg(count)) / sizeof(uint64_t);
-  len += (len == 0);
-
-  uint8_t *message = (uint8_t *)calloc(len, sizeof(uint8_t));
-  for (uint16_t i = 0; i < len; ++i) {
-    message[i] = random();
+  if (count == 1) {
+    return 0;
   }
 
-  uintx rank = import_from_unsigned_char(message, len);
+  size_t bits = 0;
+  for (uintx top = count - 1; top != 0; top >>= 1) {
+    ++bits;
+  }
+  const size_t bytes = (bits + 7) / 8;
+  const unsigned top_bits = bits % 8;
+  const uint8_t top_mask =
+      (top_bits == 0) ? UINT8_MAX : (uint8_t)((1U << top_bits) - 1U);
 
-  free(message);
-  return rank % count;
+  for (;;) {
+    uintx rank = 0;
+    for (size_t i = 0; i < bytes; ++i) {
+      uint8_t byte = (uint8_t)random();
+      if (i == 0) {
+        byte &= top_mask;
+      }
+      rank = (rank << 8) | (uintx)byte;
+    }
+    if (rank < count) {
+      return rank;
+    }
+  }
 }
 
 uintx import_from_unsigned_char(const uint8_t *bytes, const size_t len) {
