@@ -1,7 +1,7 @@
 #ifndef API_H
 #define API_H
 
-#include "types.h"
+#include "math.h"
 
 typedef bic_error_t (*setter_func_t)(uint8_t, bic_ctx_t);
 

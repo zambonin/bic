@@ -123,6 +123,11 @@ struct bic_ctx_s {
   bic_math_dir_func_t dir;
 
   uint8_t scomb_cache_stddev_level;
+  bool precomputed;
+  bool prepared;
+  uint32_t precomputed_n;
+  uint32_t precomputed_k;
+  uint32_t precomputed_d;
 };
 
 #endif // TYPES_H

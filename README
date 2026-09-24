@@ -36,4 +36,20 @@
 │                                                                            │
 └────────────────────────────────────────────────────────────────────────────┘
 
+┌─ API ──────────────────────────────────────────────────────────────────────┐
+│                                                                            │
+│  Call bic_precompute before (un)ranking, even with BIC_CACHE_NONE.         │
+│  Preparation for (n,k,d) also covers smaller n and k with the same d.      │
+│  Configure through setters; prepare again after order or cache changes.    │
+│                                                                            │
+│  The caller owns the k-element uint32_t composition buffers. For ranking,  │
+│  parts must lie in [0,d] and sum to n; for unranking, 0 <= r < B(n,k,d).   │
+│  These inputs are not checked.                                             │
+│                                                                            │
+│  Setters and preparation return bic_error_t; BIC_SUCCESS is zero. If       │
+│  preparation fails, call bic_precompute again and check that it succeeds   │
+│  before (un)ranking. Calls outside the prepared domain set errno=EINVAL.   │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
 [1] https://www.boost.org/doc/libs/latest/libs/multiprecision/doc/html/boost_multiprecision/tut/ints.html

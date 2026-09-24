@@ -1,4 +1,5 @@
 #include "math.h"
+#include "arithmetic.h"
 #include "primes.h"
 #include <errno.h>
 #include <float.h>
@@ -86,15 +87,6 @@ uint64_t kummer(const uint64_t n, const uint64_t k, const uint64_t p) {
   return c + (n_ < k_ + r);
 }
 
-static uint32_t gcd32(uint32_t a, uint32_t b) {
-  while (b != 0) {
-    const uint32_t rem = a % b;
-    a = b;
-    b = rem;
-  }
-  return a;
-}
-
 #if defined(BITINT) || defined(BOOST_FIX_INT)
 static uintx max_exact_value(void) {
   uintx limit = 1;
@@ -109,9 +101,7 @@ static bool binomial_bounded(const uint32_t n, const uint32_t k,
   for (uint32_t i = 1; i <= choose; ++i) {
     uint32_t numerator = n - choose + i;
     uint32_t denominator = i;
-    const uint32_t common = gcd32(numerator, denominator);
-    numerator /= common;
-    denominator /= common;
+    bic_reduce_ratio(&numerator, &denominator);
     result /= denominator;
     if (result > limit / numerator) {
       return false;
@@ -218,14 +208,7 @@ static uintx compute_bin_without_primes(const uint32_t n, const uint32_t k) {
   uintx result = 1;
 
   for (uint32_t i = 1; i <= choose; ++i) {
-    uint32_t numerator = n - choose + i;
-    uint32_t denominator = i;
-    const uint32_t common = gcd32(numerator, denominator);
-    numerator /= common;
-    denominator /= common;
-
-    result /= denominator;
-    result *= numerator;
+    result = bic_muldiv_exact(result, n - choose + i, i);
   }
 
   return result;
@@ -289,21 +272,22 @@ static uint32_t reflected_total(const uint32_t n, const uint32_t k,
   return complement < n ? (uint32_t)complement : n;
 }
 
-uintx compute_bic_no_cache(const uint32_t n, const uint32_t k,
-                           const uint32_t d) {
+bool bic_count_checked(uintx *out, const uint32_t n, const uint32_t k,
+                       const uint32_t d) {
   if (n > INT32_MAX || k > INT32_MAX || d > INT32_MAX) {
     errno = ERANGE;
-    return 0;
+    return false;
   }
   if (k == 0 || n == 0 || (uint64_t)n > (uint64_t)k * d) {
-    return n == 0 ? 1 : 0;
+    *out = n == 0 ? 1 : 0;
+    errno = 0;
+    return true;
   }
   const uint32_t total = reflected_total(n, k, d);
   if (!bic_params_supported(total, k, d, BIC_CACHE_NONE)) {
     errno = ERANGE;
-    return 0;
+    return false;
   }
-
   intx rop = 0;
   intx compute = 0;
   uintx left = 0;
@@ -320,7 +304,16 @@ uintx compute_bic_no_cache(const uint32_t n, const uint32_t k,
     rop += compute;
   }
 
-  return (rop < 0) ? 0 : (uintx)rop;
+  *out = (rop < 0) ? 0 : (uintx)rop;
+  errno = 0;
+  return true;
+}
+
+uintx compute_bic_no_cache(const uint32_t n, const uint32_t k,
+                           const uint32_t d) {
+  uintx result = 0;
+  (void)bic_count_checked(&result, n, k, d);
+  return result;
 }
 
 uintx compute_bic_with_sums(const uint32_t n, const uint32_t k,

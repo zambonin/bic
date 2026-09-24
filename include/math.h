@@ -24,6 +24,9 @@ bool bic_dense_comb_params_supported(const uint32_t n, const uint32_t k,
 bool bic_cache_moments_supported(const uint32_t n, const uint32_t k,
                                  const uint32_t d);
 
+bool bic_count_checked(uintx *out, const uint32_t n, const uint32_t k,
+                       const uint32_t d);
+
 uintx compute_bic_no_cache(const uint32_t n, const uint32_t k,
                            const uint32_t d);
 

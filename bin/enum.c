@@ -34,6 +34,11 @@ int32_t main(int32_t argc, char **argv) {
     goto cleanup;
   }
 
+  error = bic_precompute(n, k, d, ctx);
+  if (error != BIC_SUCCESS) {
+    goto cleanup;
+  }
+
   for (uintx r = 0; r < ctx->comp(n, k, d, ctx); ++r) {
     bic_unrank(comp, n, k, d, r, ctx);
     for (uint32_t i = 0; i < k; ++i) {

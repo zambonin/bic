@@ -215,7 +215,8 @@ int32_t main(int32_t argc, char **argv) {
     goto cleanup;
   }
 
-  if (m == 0 || k0 == 0 || k1 == 0 || count == 0) {
+  if (m == 0 || k0 == 0 || k0 > k1 || k1 > INT32_MAX || iterations == 0 ||
+      count == 0) {
     print_help(argv[0], options);
     error = BIC_ERROR_ARGUMENT;
     goto cleanup;
@@ -238,10 +239,19 @@ int32_t main(int32_t argc, char **argv) {
       uint32_t n = 0;
       uint32_t d = 0;
       bic_run_strategy(m, &n, k, &d, ctx);
-      const bic_error_t prepared = bic_precompute(n, k, d, ctx);
+      const bic_error_t prepared = n == 0 || n == UINT32_MAX
+                                       ? BIC_ERROR_RANGE
+                                       : bic_precompute(n, k, d, ctx);
       if (prepared != BIC_SUCCESS) {
+        if (mode & BIC_PERF_MODE_UNRANK) {
+          printf(" nan");
+        }
+        if (mode & BIC_PERF_MODE_RANK) {
+          printf(" nan");
+        }
+        bic_free_precomputed(ctx);
         error = prepared;
-        goto cleanup;
+        continue;
       }
 
       long double ucycles = 0;

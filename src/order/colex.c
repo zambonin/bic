@@ -1,4 +1,5 @@
 #include "order/colex.h"
+#include "arithmetic.h"
 #include "cache/common.h"
 #include "common.h"
 #include "math.h"
@@ -41,8 +42,8 @@ void colex_unrank_part_sums(uint32_t *rop, const uint32_t n, const uint32_t k,
 
       j = min(i, (it_n - part - 1) / (d + 1));
       for (uint32_t m = 0; m <= j; ++m) {
-        prev_sum[m] *= numerator;
-        prev_sum[m] /= denominator;
+        prev_sum[m] =
+            bic_signed_muldiv_exact(prev_sum[m], numerator, denominator);
         right += prev_sum[m];
         numerator -= (d + 1);
         denominator -= (d + 1);

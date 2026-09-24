@@ -93,11 +93,12 @@ bic_error_t bic_run_round_trips(const uint32_t n, const uint32_t k,
   if (comp == NULL) {
     return BIC_ERROR_ALLOCATION;
   }
+  const uintx count = ctx->comp(n, k, d, ctx);
 
   for (uint32_t it = 0; it < iterations; ++it) {
     memset(comp, 0, k * sizeof(uint32_t));
 
-    const uintx r = random_rank(n, k, d);
+    const uintx r = random_rank_count(count);
 
     if (utime || ucycles) {
       long double dummy_time;
@@ -139,8 +140,8 @@ void bic_print_config(const uint32_t n, const uint32_t k, const uint32_t d,
   const char *unrank_alg_name = bic_unrank_alg_names[ctx->unrank_alg];
   const char *strategy_name = bic_strategy_names[ctx->strategy];
   printf("n=%5u, k=%5u, d=%5u, m=%5d, b=%5.0f, c=%5s, o=%5s, a=%7s, s=%6s, ", n,
-         k, d, bits_fit_bic(n, k, d), BIT_LENGTH, cache_name, order_name,
-         unrank_alg_name, strategy_name);
+         k, d, 1 + (uint16_t)lg(ctx->comp(n, k, d, ctx)), BIT_LENGTH,
+         cache_name, order_name, unrank_alg_name, strategy_name);
 }
 
 void bic_print_perf_stats(const uint32_t it, const long double utime,

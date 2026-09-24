@@ -63,6 +63,9 @@ static bool already_built(const bic_cache_t type, const bic_ctx_t ctx) {
 
 uint8_t build_cache_rec(const bic_cache_t type, const uint32_t n,
                         const uint32_t k, const uint32_t d, bic_ctx_t ctx) {
+  if (type >= BIC_CACHE_LENGTH || (uint64_t)n + (uint64_t)k + 1 > UINT32_MAX) {
+    return 1;
+  }
   if (type == BIC_CACHE_NONE || already_built(type, ctx)) {
     return 0;
   }
@@ -99,4 +102,6 @@ void free_all_caches(bic_ctx_t ctx) {
   scomb_free_cache(ctx);
   acc_free_cache(ctx);
   small_acc_free_cache(ctx);
+  ctx->precomputed = false;
+  ctx->prepared = false;
 }
