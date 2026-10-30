@@ -46,3 +46,5 @@ clean:
 		$(LIB) $(LIBEXTRA) $(TARGETS) $(PRIMES)
 
 include Makefile.figures
+
+include tests/Makefile

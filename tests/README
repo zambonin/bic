@@ -1,0 +1,39 @@
+┌─ Tests ────────────────────────────────────────────────────────────────────┐
+│                                                                            │
+│  This branch adds tests to master without changing the library sources.    │
+│  Run from the repository root with GNU make and the selected backend       │
+│  installed. Use make clean between configurations and after changing       │
+│  included headers.                                                         │
+│                                                                            │
+│  make CC=clang BACKEND=bitint INTWIDTH=512 check                           │
+│                                                                            │
+│  make CC=clang BACKEND=bitint INTWIDTH=16 check-core                       │
+│                                                                            │
+│  make CC=clang++ BACKEND=boost-fix check                                   │
+│                                                                            │
+│  The ordinary check target runs C regressions, independent counting        │
+│  oracles, repeatable random round trips and CLI/driver checks.             │
+│  Shell checks require Miller (mlr). Narrow BitInt16 uses                   │
+│  check-core because some older tests assume that large counts or caches    │
+│  fit.                                                                      │
+│                                                                            │
+│  check-seq exercises the small parameter grid. check-rte runs the          │
+│  original rank-XOR-unrank harness; it is an arithmetic round trip. The     │
+│  harness uses no cache when its statistical cache exceeds the arithmetic   │
+│  certificate, so its timings do not reproduce that cache configuration.    │
+│                                                                            │
+│  domain and admission cover preparation, overflow, errors and algorithm    │
+│  changes. reflection, rbo and accumulated cover counting symmetry,         │
+│  recursive orders and prefix tables. parameters checks the admitted        │
+│  16-bit search grid and exact wide fixtures.                               │
+│                                                                            │
+│  errors checks named statuses, argument parsing, context preservation and  │
+│  allocation failures. The malloc and calloc wrappers check that failed     │
+│  allocation cannot produce a successful benchmark result. errors.sh        │
+│  checks exit statuses, including invalid arguments followed by valid       │
+│  options.                                                                  │
+│                                                                            │
+│  cache-access.sh checks operation partitions, matched recipe arguments     │
+│  and failure propagation.                                                  │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
