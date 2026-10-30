@@ -24,11 +24,32 @@ void check_valid_bounded_composition(const uint32_t *c, const uint32_t n,
 }
 
 uint16_t bits_fit_bic(const uint32_t n, const uint32_t k, const uint32_t d) {
-  return 1 + ((uint16_t)lg(compute_bic_no_cache(n, k, d)));
+  uintx count;
+  if (!bic_count_checked(&count, n, k, d)) {
+    return 0;
+  }
+  uint16_t bits = 0;
+  while (count != 0) {
+    if (bits == UINT16_MAX) {
+      errno = ERANGE;
+      return 0;
+    }
+    ++bits;
+    count >>= 1;
+  }
+  return bits;
 }
 
 uintx random_rank(const uint32_t n, const uint32_t k, const uint32_t d) {
-  return random_rank_count(compute_bic_no_cache(n, k, d));
+  uintx count;
+  if (!bic_count_checked(&count, n, k, d)) {
+    return 0;
+  }
+  if (count == 0) {
+    errno = EDOM;
+    return 0;
+  }
+  return random_rank_count(count);
 }
 
 uintx random_rank_count(const uintx count) {
